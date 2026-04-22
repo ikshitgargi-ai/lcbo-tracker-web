@@ -16,14 +16,18 @@ import {
   X,
   ArrowDownUp,
   Database,
+  Navigation,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/ask', label: 'AI Assistant', icon: Sparkles },
   { href: '/sod', label: 'SOD Live', icon: Database },
   { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
   { href: '/opportunities', label: 'Opportunities', icon: Target },
+  { href: '/nearby', label: 'Nearby', icon: Navigation },
   { href: '/map', label: 'Map', icon: MapPin },
   { href: '/territories', label: 'Territories', icon: Globe2 },
   { href: '/reports', label: 'Reports', icon: Activity },

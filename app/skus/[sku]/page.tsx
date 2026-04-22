@@ -3,11 +3,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Package } from 'lucide-react';
+import { ArrowLeft, Package, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { formatNumber, formatDate, statusBadgeClass, statusLabel } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { formatNumber, statusBadgeClass, statusLabel } from '@/lib/utils';
+import { SkuTrendChart, SkuStockChart } from '@/components/sku-trend-chart';
+import { downloadCSV } from '@/lib/export';
 
 export default function SkuPage({
   params,
@@ -18,6 +21,10 @@ export default function SkuPage({
   const oos = useQuery({
     queryKey: ['oos-for-sku', sku],
     queryFn: () => api.oosRisk({ sku, threshold: 20 }),
+  });
+  const trend = useQuery({
+    queryKey: ['sku-trend', sku, 90],
+    queryFn: () => api.skuTrend(sku, 90),
   });
 
   return (
@@ -32,21 +39,54 @@ export default function SkuPage({
       <header>
         <h1 className="text-2xl sm:text-3xl font-semibold flex items-center gap-2">
           <Package size={24} className="text-[var(--color-accent)]" />
-          SKU {sku}
+          {trend.data?.brand} {trend.data?.product_name}
         </h1>
-        <p className="text-sm text-[var(--color-muted)]">
-          Store-level listing status for this SKU in the latest SOD snapshot.
-        </p>
+        <p className="text-sm text-[var(--color-muted)] font-mono">SKU {sku}</p>
       </header>
 
       <FreshnessBanner />
 
       <Card>
         <CardHeader>
-          <CardTitle>Listed stores</CardTitle>
+          <CardTitle>Listing status over time</CardTitle>
           <CardDescription>
-            Only stores showing this SKU — sorted by on-hand ascending (lowest stock first).
+            Store-count by status, last {trend.data?.days ?? 90} days.
           </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SkuTrendChart trend={trend.data} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Total on-hand over time</CardTitle>
+          <CardDescription>Units summed across all stores per snapshot.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SkuStockChart trend={trend.data} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Store-level listing</CardTitle>
+              <CardDescription>
+                Sorted by lowest on-hand. Click a store to drill into its SKU history.
+              </CardDescription>
+            </div>
+            {oos.data && oos.data.length > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => downloadCSV(oos.data, `sku-${sku}-stores`)}
+              >
+                <Download size={14} /> CSV
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -94,8 +134,7 @@ export default function SkuPage({
                 {oos.data?.length === 0 && (
                   <tr>
                     <td colSpan={6} className="text-center py-8 text-[var(--color-muted)]">
-                      No stores carrying this SKU at/below threshold. (Try the dashboard for full
-                      coverage.)
+                      No stores carrying this SKU at/below threshold.
                     </td>
                   </tr>
                 )}

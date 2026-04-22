@@ -2,15 +2,19 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ArrowRight, AlertTriangle, TrendingUp, TrendingDown, Package } from 'lucide-react';
+import { ArrowRight, AlertTriangle, TrendingUp, TrendingDown, Package, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { DeltaBadge } from '@/components/delta-badge';
 import { formatNumber, formatDate, statusBadgeClass, statusLabel } from '@/lib/utils';
+import { downloadCSV } from '@/lib/export';
 
 export default function DashboardPage() {
   const dash = useQuery({ queryKey: ['crm-dashboard'], queryFn: api.crmDashboard });
   const digest = useQuery({ queryKey: ['digest', 14], queryFn: () => api.listingDigest(14) });
+  const wow = useQuery({ queryKey: ['wow-deltas'], queryFn: api.wowDeltas });
 
   return (
     <div className="space-y-6">
@@ -66,7 +70,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Tracked SKU rollup */}
+      {/* Tracked SKU rollup with WoW/MoM deltas */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -74,56 +78,82 @@ export default function DashboardPage() {
               <Package size={18} className="text-[var(--color-accent)]" />
               Tracked Products
             </CardTitle>
-            <Link
-              href="/sod"
-              className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1"
-            >
-              SOD details <ArrowRight size={12} />
-            </Link>
+            <div className="flex items-center gap-2">
+              {dash.data && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => downloadCSV(dash.data.tracked_sku_rollup, 'tracked-products')}
+                >
+                  <Download size={14} /> CSV
+                </Button>
+              )}
+              <Link
+                href="/sod"
+                className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1"
+              >
+                SOD details <ArrowRight size={12} />
+              </Link>
+            </div>
           </div>
-          <CardDescription>From the latest SOD snapshot, our 8 tracked SKUs.</CardDescription>
+          <CardDescription>
+            Latest SOD snapshot · deltas vs. last week (WoW) &amp; last month (MoM).
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <table className="data-table table-to-cards min-w-[600px] sm:min-w-0">
+            <table className="data-table table-to-cards min-w-[850px] sm:min-w-0">
               <thead>
                 <tr>
                   <th>Brand</th>
                   <th>Product</th>
                   <th>Status</th>
                   <th className="text-right">Stores</th>
-                  <th className="text-right">Total On-Hand</th>
+                  <th className="text-right">WoW</th>
+                  <th className="text-right">MoM</th>
+                  <th className="text-right">On-Hand</th>
                 </tr>
               </thead>
               <tbody>
-                {dash.data?.tracked_sku_rollup.map((p) => (
-                  <tr key={p.sku}>
-                    <td data-label="Brand">{p.brand}</td>
-                    <td data-label="Product">
-                      <Link
-                        href={`/skus/${p.sku}`}
-                        className="text-[var(--color-foreground)] hover:text-[var(--color-accent)]"
-                      >
-                        {p.product_name}
-                      </Link>
-                      <div className="text-[10px] text-[var(--color-muted)] font-mono">{p.sku}</div>
-                    </td>
-                    <td data-label="Status">
-                      <span className={statusBadgeClass(p.current_status)}>
-                        {statusLabel(p.current_status)}
-                      </span>
-                    </td>
-                    <td data-label="Stores" className="text-right tabular-nums">
-                      {p.store_count}
-                    </td>
-                    <td data-label="On-Hand" className="text-right tabular-nums">
-                      {formatNumber(p.total_on_hand)}
-                    </td>
-                  </tr>
-                )) ??
+                {dash.data?.tracked_sku_rollup.map((p) => {
+                  const wowRow = wow.data?.tracked.find((t) => t.sku === p.sku);
+                  return (
+                    <tr key={p.sku}>
+                      <td data-label="Brand">{p.brand}</td>
+                      <td data-label="Product">
+                        <Link
+                          href={`/skus/${p.sku}`}
+                          className="text-[var(--color-foreground)] hover:text-[var(--color-accent)]"
+                        >
+                          {p.product_name}
+                        </Link>
+                        <div className="text-[10px] text-[var(--color-muted)] font-mono">
+                          {p.sku}
+                        </div>
+                      </td>
+                      <td data-label="Status">
+                        <span className={statusBadgeClass(p.current_status)}>
+                          {statusLabel(p.current_status)}
+                        </span>
+                      </td>
+                      <td data-label="Stores" className="text-right tabular-nums">
+                        {p.store_count}
+                      </td>
+                      <td data-label="WoW" className="text-right">
+                        <DeltaBadge delta={wowRow?.wow.listed_delta} />
+                      </td>
+                      <td data-label="MoM" className="text-right">
+                        <DeltaBadge delta={wowRow?.mom.listed_delta} />
+                      </td>
+                      <td data-label="On-Hand" className="text-right tabular-nums">
+                        {formatNumber(p.total_on_hand)}
+                      </td>
+                    </tr>
+                  );
+                }) ??
                   Array.from({ length: 8 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={5}>
+                      <td colSpan={7}>
                         <div className="skeleton h-5 w-full" />
                       </td>
                     </tr>

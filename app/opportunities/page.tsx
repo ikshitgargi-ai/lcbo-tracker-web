@@ -3,11 +3,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Target } from 'lucide-react';
+import { Target, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { formatNumber, statusBadgeClass, statusLabel } from '@/lib/utils';
+import { downloadCSV } from '@/lib/export';
 
 export default function OppsPage() {
   const [sku, setSku] = useState<string | undefined>();
@@ -87,8 +89,23 @@ export default function OppsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{opps.data?.length ?? 0} pitch targets</CardTitle>
-          <CardDescription>Score weights delisting + low stock + competitor status.</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{opps.data?.length ?? 0} pitch targets</CardTitle>
+              <CardDescription>
+                Score weights delisting + low stock + competitor status.
+              </CardDescription>
+            </div>
+            {opps.data && opps.data.length > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => downloadCSV(opps.data, 'opportunities')}
+              >
+                <Download size={14} /> CSV
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto -mx-4 sm:mx-0">

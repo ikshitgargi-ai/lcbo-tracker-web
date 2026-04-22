@@ -2,12 +2,14 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Download } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { formatNumber, severityClass } from '@/lib/utils';
+import { downloadCSV } from '@/lib/export';
 
 export default function OosPage() {
   const [threshold, setThreshold] = useState(2);
@@ -90,8 +92,21 @@ export default function OosPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{oos.data?.length ?? 0} stores at risk</CardTitle>
-          <CardDescription>Sorted by lowest on-hand first.</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>{oos.data?.length ?? 0} stores at risk</CardTitle>
+              <CardDescription>Sorted by lowest on-hand first.</CardDescription>
+            </div>
+            {oos.data && oos.data.length > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => downloadCSV(oos.data, 'oos-risk')}
+              >
+                <Download size={14} /> CSV
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto -mx-4 sm:mx-0">

@@ -106,6 +106,33 @@ export const api = {
   storeInventory: (storeNumber: number | string) =>
     request<StoreInventory>(`/api/crm/store/${storeNumber}/inventory`),
 
+  // ===== Sprint 2: drill-down + comparison + GPS + AI =====
+  skuTrend: (sku: string, days = 90) =>
+    request<SkuTrend>(`/api/crm/sku-trend/${sku}?days=${days}`),
+  storeTrend: (storeNumber: number | string, days = 90) =>
+    request<StoreTrend>(`/api/crm/store-trend/${storeNumber}?days=${days}`),
+  wowDeltas: () => request<WowDeltasPayload>('/api/crm/wow-deltas'),
+  nearby: (params: {
+    lat: number;
+    lng: number;
+    radius_km?: number;
+    limit?: number;
+    sku?: string;
+  }) => {
+    const qs = new URLSearchParams();
+    qs.set('lat', String(params.lat));
+    qs.set('lng', String(params.lng));
+    if (params.radius_km != null) qs.set('radius_km', String(params.radius_km));
+    if (params.limit != null) qs.set('limit', String(params.limit));
+    if (params.sku) qs.set('sku', params.sku);
+    return request<NearbyPayload>(`/api/crm/nearby?${qs.toString()}`);
+  },
+  aiAsk: (question: string) =>
+    request<AiAskPayload>('/api/ai/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question }),
+    }),
+
   // ===== Tracked products =====
   trackedProducts: () => request<ProductRow[]>('/api/products'),
   sodProducts: (tracked = true) =>
@@ -407,4 +434,80 @@ export interface ProductRow {
 export interface SodProductsResponse {
   products?: Array<{ sku: string; product_name: string; brand: string }>;
   rows?: Array<{ sku: string; product_name: string; brand: string }>;
+}
+
+// Sprint 2 types
+export interface SkuTrend {
+  sku: string;
+  brand: string;
+  product_name: string;
+  days: number;
+  since: string;
+  series: Array<{
+    date: string;
+    listed: number;
+    delisting: number;
+    fully_delisted: number;
+    total_on_hand: number;
+    avg_on_hand: number;
+  }>;
+  freshness: Freshness;
+}
+
+export interface StoreTrend {
+  store_number: number;
+  days: number;
+  since: string;
+  series: Array<{
+    date: string;
+    sku: string;
+    brand: string;
+    product_name: string;
+    status: string;
+    on_hand: number;
+  }>;
+  freshness: Freshness;
+}
+
+export interface Delta {
+  abs: number;
+  pct: number | null;
+}
+
+export interface WowDeltasPayload {
+  snapshots: Record<string, string | null>;
+  tracked: Array<{
+    sku: string;
+    brand: string;
+    product_name: string;
+    now: { listed: number; on_hand: number };
+    wow: { listed_delta: Delta; on_hand_delta: Delta; baseline_snapshot: string | null };
+    mom: { listed_delta: Delta; on_hand_delta: Delta; baseline_snapshot: string | null };
+    yoy: { listed_delta: Delta; on_hand_delta: Delta; baseline_snapshot: string | null };
+  }>;
+  freshness: Freshness;
+}
+
+export interface NearbyStore extends Store {
+  distance_km: number;
+  sku_status?: string | null;
+  sku_on_hand?: number;
+  opportunity_score?: number;
+}
+export interface NearbyPayload {
+  origin: { lat: number; lng: number };
+  radius_km: number;
+  sku: string | null;
+  results: NearbyStore[];
+  total_within_radius: number;
+}
+
+export interface AiAskPayload {
+  question: string;
+  sql: string;
+  rows: Array<Record<string, unknown>>;
+  columns: string[];
+  row_count: number;
+  answer: string;
+  model: string;
 }
