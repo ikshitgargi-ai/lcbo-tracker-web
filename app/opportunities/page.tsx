@@ -108,101 +108,79 @@ export default function OppsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <table className="data-table table-to-cards min-w-[850px] sm:min-w-0">
-              <thead>
-                <tr>
-                  <th className="text-right">Score</th>
-                  <th>Pitch</th>
-                  <th>Slow Competitor</th>
-                  <th>Category</th>
-                  <th>Store</th>
-                  <th>Territory</th>
-                  <th>Status</th>
-                  <th className="text-right">On-Hand</th>
-                </tr>
-              </thead>
-              <tbody>
-                {opps.data?.map((o, i) => (
-                  <tr key={i}>
-                    <td data-label="Score" className="text-right">
-                      <span
-                        className="text-lg font-semibold"
-                        style={{
-                          color:
-                            o.opportunity_score >= 50
-                              ? 'var(--color-danger)'
-                              : o.opportunity_score >= 25
-                                ? 'var(--color-warning)'
-                                : 'var(--color-muted)',
-                        }}
-                      >
-                        {o.opportunity_score}
-                      </span>
-                    </td>
-                    <td data-label="Pitch">
-                      <div className="font-medium">
+          {/* Mobile/desktop card layout */}
+          <div className="space-y-2.5">
+            {opps.isLoading &&
+              Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-28" />)}
+            {opps.data?.length === 0 && (
+              <div className="text-center py-12 text-muted">
+                No opportunities found. Run a SOD refresh or widen the threshold.
+              </div>
+            )}
+            {opps.data?.map((o, i) => {
+              const scoreColor =
+                o.opportunity_score >= 50
+                  ? 'var(--color-danger)'
+                  : o.opportunity_score >= 25
+                    ? 'var(--color-warning)'
+                    : 'var(--color-muted)';
+              return (
+                <Link
+                  key={i}
+                  href={`/stores/${o.store_number}`}
+                  className="m-card block"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                        <span
+                          className="change-chip"
+                          style={{ background: scoreColor + '22', color: scoreColor }}
+                        >
+                          SCORE {o.opportunity_score}
+                        </span>
+                        <span className={statusBadgeClass(o.competitor_status)}>
+                          {statusLabel(o.competitor_status)}
+                        </span>
+                        <span
+                          className="change-chip"
+                          style={{
+                            background: o.territory_color + '33',
+                            color: o.territory_color,
+                          }}
+                        >
+                          {o.territory_name}
+                        </span>
+                      </div>
+                      <div className="text-xs uppercase tracking-wider text-muted font-semibold">
+                        Pitch our
+                      </div>
+                      <div className="font-semibold">
                         {o.our_brand} {o.our_product}
                       </div>
-                      <div className="text-[10px] text-[var(--color-muted)] font-mono">
-                        {o.our_sku}
+                      <div className="text-xs uppercase tracking-wider text-muted font-semibold mt-2">
+                        Replace slow
                       </div>
-                    </td>
-                    <td data-label="Slow Competitor">
-                      <div className="text-sm">{o.competitor_name?.slice(0, 32)}</div>
-                      <div className="text-[10px] text-[var(--color-muted)] font-mono">
-                        {o.competitor_sku}
+                      <div className="text-sm truncate">
+                        {o.competitor_name?.slice(0, 40)}
+                        <span className="text-muted"> · {o.category}</span>
                       </div>
-                    </td>
-                    <td data-label="Category" className="text-sm">
-                      {o.category}
-                    </td>
-                    <td data-label="Store">
-                      <Link
-                        href={`/stores/${o.store_number}`}
-                        className="hover:text-[var(--color-accent)]"
-                      >
-                        #{o.store_number}
-                      </Link>
-                      <div className="text-[10px] text-[var(--color-muted)]">{o.city}</div>
-                    </td>
-                    <td data-label="Territory">
-                      <span
-                        className="badge"
-                        style={{
-                          background: o.territory_color + '33',
-                          color: o.territory_color,
-                        }}
-                      >
-                        {o.territory_name}
-                      </span>
-                    </td>
-                    <td data-label="Status">
-                      <span className={statusBadgeClass(o.competitor_status)}>
-                        {statusLabel(o.competitor_status)}
-                      </span>
-                    </td>
-                    <td data-label="On-Hand" className="text-right tabular-nums">
-                      {formatNumber(o.competitor_on_hand)}
-                    </td>
-                  </tr>
-                ))}
-                {opps.isLoading && (
-                  <tr>
-                    <td colSpan={8}>
-                      <div className="skeleton h-24" />
-                    </td>
-                  </tr>
-                )}
-                {opps.data?.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="text-center py-8 text-[var(--color-muted)]">
-                      No opportunities found. Run a SOD refresh or widen the threshold.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      <div className="text-xs text-muted mt-2">
+                        Store #{o.store_number} · {o.city}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-[10px] uppercase tracking-wider text-muted font-semibold">
+                        Comp Stock
+                      </div>
+                      <div className="text-2xl font-bold mt-0.5 tabular-nums">
+                        {formatNumber(o.competitor_on_hand)}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

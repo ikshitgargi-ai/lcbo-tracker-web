@@ -18,17 +18,24 @@ import {
   Database,
   Navigation,
   Sparkles,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Primary nav (mobile + desktop). Order matters.
 const NAV = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/ask', label: 'AI Assistant', icon: Sparkles },
-  { href: '/sod', label: 'SOD Live', icon: Database },
+  { href: '/listings', label: 'Listings', icon: Zap, highlight: true },
   { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
   { href: '/opportunities', label: 'Opportunities', icon: Target },
   { href: '/nearby', label: 'Nearby', icon: Navigation },
-  { href: '/map', label: 'Map', icon: MapPin },
+  { href: '/ask', label: 'Ask AI', icon: Sparkles },
+];
+
+// Secondary nav — shown in full drawer/sidebar but lower priority
+const NAV_SECONDARY = [
+  { href: '/sod', label: 'SOD Status', icon: Database },
+  { href: '/map', label: 'Store Map', icon: MapPin },
   { href: '/territories', label: 'Territories', icon: Globe2 },
   { href: '/reports', label: 'Reports', icon: Activity },
   { href: '/goals', label: 'Goals', icon: Flag },
@@ -93,6 +100,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {NAV.map((item) => (
                 <NavLink key={item.href} item={item} active={pathname === item.href} />
               ))}
+              <div className="mt-4 mb-2 px-3 text-[10px] uppercase tracking-wider text-[var(--color-muted)] font-semibold">
+                More
+              </div>
+              {NAV_SECONDARY.map((item) => (
+                <NavLink key={item.href} item={item} active={pathname === item.href} />
+              ))}
             </div>
           </nav>
         </div>
@@ -113,15 +126,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV.map((item) => (
             <NavLink key={item.href} item={item} active={pathname === item.href} />
           ))}
+          <div className="mt-5 mb-2 px-3 text-[10px] uppercase tracking-wider text-[var(--color-muted)] font-semibold">
+            More
+          </div>
+          {NAV_SECONDARY.map((item) => (
+            <NavLink key={item.href} item={item} active={pathname === item.href} />
+          ))}
         </nav>
         <div className="p-4 text-[10px] text-[var(--color-muted)] border-t border-[var(--color-card-border)]">
-          Anu Spirits · v2.0 Sprint 1
+          Anu Spirits · Tracker Pro
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Mobile bottom tab bar — always visible */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[rgba(10,12,16,0.96)] backdrop-blur border-t border-[var(--color-card-border)] safe-bottom">
+        <div className="flex items-stretch justify-around">
+          {NAV.slice(0, 5).map((item) => {
+            const Icon = item.icon;
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px]',
+                  active ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]',
+                )}
+              >
+                <Icon size={20} />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Main content — with bottom padding for mobile tab bar */}
       <main className="lg:pl-64 min-h-[100dvh]">
-        <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-[1400px] mx-auto safe-bottom">
+        <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 pb-24 lg:pb-6 max-w-[1400px] mx-auto">
           {children}
         </div>
       </main>

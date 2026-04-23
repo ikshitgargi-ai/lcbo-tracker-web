@@ -109,74 +109,63 @@ export default function OosPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <table className="data-table table-to-cards min-w-[700px] sm:min-w-0">
-              <thead>
-                <tr>
-                  <th>Severity</th>
-                  <th>Store</th>
-                  <th>Product</th>
-                  <th className="text-right">On-Hand</th>
-                  <th>Territory</th>
-                  <th>Rep</th>
-                </tr>
-              </thead>
-              <tbody>
-                {oos.data?.map((r, i) => (
-                  <tr key={i}>
-                    <td data-label="Severity">
-                      <span className={`badge ${severityBadge(r.severity)}`}>
+          {/* Mobile/desktop unified card layout */}
+          <div className="space-y-2.5">
+            {oos.isLoading &&
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="skeleton h-24" />
+              ))}
+            {oos.data?.length === 0 && (
+              <div className="text-center py-12 text-muted">
+                No stores at OOS risk. Excellent!
+              </div>
+            )}
+            {oos.data?.map((r, i) => (
+              <Link
+                key={i}
+                href={`/stores/${r.store_number}`}
+                className="m-card block"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                      <span className={`change-chip ${
+                        r.severity === 'critical' ? 'change-DELISTED' :
+                        r.severity === 'high' ? 'change-STATUS_FLIP' : 'change-BASELINE'
+                      }`}>
                         {r.severity.toUpperCase()}
                       </span>
-                    </td>
-                    <td data-label="Store">
-                      <Link
-                        href={`/stores/${r.store_number}`}
-                        className="text-[var(--color-foreground)] hover:text-[var(--color-accent)]"
-                      >
-                        #{r.store_number}
-                      </Link>
-                      <div className="text-[10px] text-[var(--color-muted)]">
-                        {r.account} · {r.city}
-                      </div>
-                    </td>
-                    <td data-label="Product">
-                      <div className="text-sm">{r.product_name?.slice(0, 28)}</div>
-                      <div className="text-[10px] text-[var(--color-muted)] font-mono">{r.sku}</div>
-                    </td>
-                    <td data-label="On-Hand" className="text-right tabular-nums">
-                      <span className={severityClass(r.severity) + ' text-lg font-semibold'}>
-                        {formatNumber(r.on_hand)}
-                      </span>
-                    </td>
-                    <td data-label="Territory">
                       <span
-                        className="badge"
+                        className="change-chip"
                         style={{ background: r.territory_color + '33', color: r.territory_color }}
                       >
                         {r.territory_name}
                       </span>
-                    </td>
-                    <td data-label="Rep">{r.rep || '—'}</td>
-                  </tr>
-                ))}
-                {oos.isLoading &&
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>
-                      <td colSpan={6}>
-                        <div className="skeleton h-6" />
-                      </td>
-                    </tr>
-                  ))}
-                {oos.data?.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="text-center py-8 text-[var(--color-muted)]">
-                      No stores at OOS risk. Excellent!
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                    </div>
+                    <div className="font-semibold text-base">
+                      #{r.store_number} · {r.account}
+                    </div>
+                    <div className="text-xs text-muted mt-0.5">
+                      {r.city} {r.rep ? `· ${r.rep}` : ''}
+                    </div>
+                    <div className="mt-2 text-sm">
+                      {r.product_name?.slice(0, 40)}
+                      <span className="text-muted font-mono ml-1 text-xs">{r.sku}</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[10px] uppercase tracking-wider text-muted font-semibold">
+                      On-Hand
+                    </div>
+                    <div
+                      className={severityClass(r.severity) + ' text-3xl font-bold mt-0.5 tabular-nums'}
+                    >
+                      {formatNumber(r.on_hand)}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </CardContent>
       </Card>
