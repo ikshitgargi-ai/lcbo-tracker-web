@@ -22,19 +22,24 @@ import {
   Calendar,
   Plus,
   TrendingUp,
+  Tag,
+  Trophy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Primary nav: action-oriented (Today, Log, Pipeline) come first.
-// Bottom-tab on mobile uses the first 5.
+// Primary nav: 5 things on the bottom tab bar (mobile), expanded list in drawer.
+// Order: HOME → BRANDS → LOG → TODAY → PIPELINE
 const NAV = [
-  { href: '/today', label: 'Today', icon: Calendar },
+  { href: '/', label: 'Home', icon: LayoutDashboard },
+  { href: '/brands', label: 'Brands', icon: Tag },
   { href: '/log', label: 'Log', icon: Plus },
+  { href: '/today', label: 'Today', icon: Calendar },
   { href: '/pipeline', label: 'Pipeline', icon: Target },
-  { href: '/listings', label: 'Listings', icon: Zap },
-  { href: '/oos', label: 'OOS', icon: AlertTriangle },
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/opportunities', label: 'Opportunities', icon: TrendingUp },
+  // visible only in drawer/sidebar (after the bottom-tab-bar slice of 5):
+  { href: '/new-distribution', label: 'New Distribution', icon: TrendingUp },
+  { href: '/listings', label: 'Listings Feed', icon: Zap },
+  { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
+  { href: '/opportunities', label: 'Opportunities', icon: Trophy },
   { href: '/activity', label: 'Activity Feed', icon: Activity },
   { href: '/nearby', label: 'Nearby', icon: Navigation },
   { href: '/ask', label: 'Ask AI', icon: Sparkles },

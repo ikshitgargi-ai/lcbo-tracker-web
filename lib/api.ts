@@ -212,6 +212,25 @@ export const api = {
     request<StoreFullPayload>(`/api/crm/store/${storeNumber}/full`),
   replaceTargets: (storeNumber: number | string, perCat = 5) =>
     request<ReplaceTargetsPayload>(`/api/crm/store/${storeNumber}/replace-targets?per_cat=${perCat}`),
+
+  // ===== Sprint 4: Brand drill-down + distribution additions =====
+  brands: () => request<BrandsPayload>('/api/crm/brands'),
+  brand: (brand: string) =>
+    request<BrandDetailPayload>(`/api/crm/brand/${encodeURIComponent(brand)}`),
+  distributionAdditions: (params: { days?: number; sku?: string; brand?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.days != null) qs.set('days', String(params.days));
+    if (params.sku) qs.set('sku', params.sku);
+    if (params.brand) qs.set('brand', params.brand);
+    const s = qs.toString();
+    return request<DistributionAdditionsPayload>(
+      `/api/crm/distribution-additions${s ? `?${s}` : ''}`,
+    );
+  },
+  backfillStoreChanges: () =>
+    request<{ inserted: number; status: string }>('/api/crm/backfill-store-changes', {
+      method: 'POST',
+    }),
 };
 
 // ===== Types =====
@@ -863,4 +882,98 @@ export interface ReplaceTargetsPayload {
   store_number: number;
   snapshot_date: string | null;
   categories: ReplaceCategory[];
+}
+
+// Sprint 4 types
+export interface BrandSummary {
+  brand: string;
+  slug: string;
+  sku_count: number;
+  skus: Array<{ sku: string; product_name: string }>;
+  total_listed: number;
+  total_delisting: number;
+  total_on_hand: number;
+  total_stores: number;
+  additions_60d: number;
+}
+export interface BrandsPayload {
+  brands: BrandSummary[];
+}
+
+export interface BrandDetailPayload {
+  brand: string;
+  skus: string[];
+  per_sku: Array<{
+    sku: string;
+    brand: string;
+    product_name: string;
+    snapshot_date: string | null;
+    listed: number;
+    delisting: number;
+    fully_delisted: number;
+    total_on_hand: number;
+  }>;
+  totals: {
+    total_stores_with_any_listed: number;
+    total_stores_with_all_listed: number;
+    total_stores_with_any_delisting: number;
+    total_stores_in_matrix: number;
+  };
+  matrix: Array<{
+    store_number: number;
+    account: string | null;
+    city: string | null;
+    territory_name: string | null;
+    territory_color: string | null;
+    skus: Record<string, { status: string; on_hand: number }>;
+  }>;
+  recent_changes_60d: {
+    counts: Record<string, number>;
+    recent: Array<{
+      sku: string;
+      store_number: number;
+      change_date: string;
+      change_type: string;
+      old_status: string | null;
+      new_status: string | null;
+      account: string | null;
+      city: string | null;
+    }>;
+  };
+  freshness: Freshness;
+}
+
+export interface DistributionAddition {
+  sku: string;
+  brand: string;
+  product_name: string;
+  store_number: number;
+  change_date: string;
+  old_status: string | null;
+  new_status: string | null;
+  change_type: string;
+  account: string | null;
+  city: string | null;
+  postal: string | null;
+  rep: string | null;
+  priority: string | null;
+  territory_name: string;
+  territory_color: string;
+  current_on_hand: number;
+  current_status: string | null;
+}
+export interface DistributionAdditionsPayload {
+  days: number;
+  since: string;
+  total: number;
+  per_sku: Array<{
+    sku: string;
+    brand: string;
+    product_name: string;
+    count: number;
+    still_listed: number;
+    lost_again: number;
+  }>;
+  additions: DistributionAddition[];
+  freshness: Freshness;
 }
