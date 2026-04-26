@@ -137,6 +137,81 @@ export const api = {
   trackedProducts: () => request<ProductRow[]>('/api/products'),
   sodProducts: (tracked = true) =>
     request<SodProductsResponse>(`/api/sod/products${tracked ? '?tracked=1' : ''}`),
+
+  // ===== System-of-action CRM (Sprint 3 backend) =====
+  today: (rep: string, limit = 8) =>
+    request<TodayPayload>(`/api/crm/today/${encodeURIComponent(rep)}?limit=${limit}`),
+  reps: () => request<{ rep: string; store_count: number }[]>('/api/crm/reps-with-stores'),
+
+  deals: (params: {
+    rep?: string; stage?: string; sku?: string; store_number?: number; include_closed?: boolean;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.rep) qs.set('rep', params.rep);
+    if (params.stage) qs.set('stage', params.stage);
+    if (params.sku) qs.set('sku', params.sku);
+    if (params.store_number) qs.set('store_number', String(params.store_number));
+    if (params.include_closed) qs.set('include_closed', '1');
+    const s = qs.toString();
+    return request<DealsPayload>(`/api/crm/deals${s ? `?${s}` : ''}`);
+  },
+  createDeal: (body: DealCreate) =>
+    request<{ status: string; id: number }>('/api/crm/deals', {
+      method: 'POST', body: JSON.stringify(body),
+    }),
+  updateDeal: (id: number, body: Partial<Deal>) =>
+    request<{ status: string }>(`/api/crm/deals/${id}`, {
+      method: 'PATCH', body: JSON.stringify(body),
+    }),
+  deleteDeal: (id: number) =>
+    request<{ status: string }>(`/api/crm/deals/${id}`, { method: 'DELETE' }),
+
+  activities: (params: {
+    rep?: string; store_number?: number; horeca_account_id?: number; days?: number;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.rep) qs.set('rep', params.rep);
+    if (params.store_number) qs.set('store_number', String(params.store_number));
+    if (params.horeca_account_id) qs.set('horeca_account_id', String(params.horeca_account_id));
+    if (params.days != null) qs.set('days', String(params.days));
+    const s = qs.toString();
+    return request<{ activities: Activity[]; window_days: number; total: number }>(
+      `/api/crm/activities${s ? `?${s}` : ''}`,
+    );
+  },
+  logActivity: (body: ActivityCreate) =>
+    request<{ status: string; id: number }>('/api/crm/activities', {
+      method: 'POST', body: JSON.stringify(body),
+    }),
+
+  quotas: (params: { rep?: string; quarter?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.rep) qs.set('rep', params.rep);
+    if (params.quarter) qs.set('quarter', params.quarter);
+    const s = qs.toString();
+    return request<QuotasPayload>(`/api/crm/quotas${s ? `?${s}` : ''}`);
+  },
+  upsertQuota: (body: QuotaCreate) =>
+    request<{ status: string }>('/api/crm/quotas', {
+      method: 'POST', body: JSON.stringify(body),
+    }),
+
+  velocity: (sku: string, days = 30, top = 20) =>
+    request<VelocityPayload>(`/api/crm/velocity/${sku}?days=${days}&top=${top}`),
+  shelfShare: (storeNumber: number | string) =>
+    request<ShelfSharePayload>(`/api/crm/shelf-share/${storeNumber}`),
+
+  // ===== Hero charts =====
+  portfolioTrend: (days = 30) =>
+    request<PortfolioTrendPayload>(`/api/crm/portfolio-trend?days=${days}`),
+  ingestCalendar: (days = 14) =>
+    request<IngestCalendarPayload>(`/api/sod/ingest-calendar?days=${days}`),
+
+  // ===== Killer rep workflow: in-store replace targets =====
+  storeFull: (storeNumber: number | string) =>
+    request<StoreFullPayload>(`/api/crm/store/${storeNumber}/full`),
+  replaceTargets: (storeNumber: number | string, perCat = 5) =>
+    request<ReplaceTargetsPayload>(`/api/crm/store/${storeNumber}/replace-targets?per_cat=${perCat}`),
 };
 
 // ===== Types =====
@@ -510,4 +585,282 @@ export interface AiAskPayload {
   row_count: number;
   answer: string;
   model: string;
+}
+
+// ===== Sprint 3: workflow types =====
+export interface TodayStop {
+  store_id: number;
+  store_number: number;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  priority: string;
+  lat: number;
+  lng: number;
+  territory_id: number | null;
+  territory_name: string;
+  territory_color: string;
+  days_since_visit: number | null;
+  visit_count: number;
+  oos_count: number;
+  deals: Array<{ sku: string; stage: string; next_action: string; next_action_date: string | null }>;
+  score: number;
+}
+
+export interface TodayPayload {
+  rep: string;
+  plan_date: string;
+  stops: TodayStop[];
+  total_distance_km: number;
+  total_stops: number;
+  overdue_deal_actions: number;
+  total_candidate_stores: number;
+}
+
+export type DealStage =
+  | 'prospecting'
+  | 'pitched'
+  | 'tasting_scheduled'
+  | 'tasting_done'
+  | 'samples_left'
+  | 'in_review'
+  | 'listed'
+  | 'lost';
+
+export interface Deal {
+  id: number;
+  store_number: number | null;
+  horeca_account_id: number | null;
+  sku: string;
+  brand: string;
+  product_name: string;
+  stage: DealStage;
+  probability: number;
+  expected_close_date: string | null;
+  expected_units: number;
+  expected_revenue: number;
+  owner_rep: string;
+  next_action: string;
+  next_action_date: string | null;
+  notes: string;
+  source: string;
+  closed_at: string | null;
+  closed_reason: string;
+  created_at: string | null;
+  updated_at: string | null;
+  account: string;
+  city: string;
+  territory_id: number | null;
+  territory_name: string;
+  territory_color: string;
+  horeca_name: string | null;
+}
+
+export interface DealCreate {
+  store_number?: number;
+  horeca_account_id?: number;
+  sku: string;
+  stage?: DealStage;
+  probability?: number;
+  expected_close_date?: string;
+  expected_units?: number;
+  expected_revenue?: number;
+  owner_rep?: string;
+  next_action?: string;
+  next_action_date?: string;
+  notes?: string;
+  source?: string;
+}
+
+export interface DealsPayload {
+  deals: Deal[];
+  stage_counts: Record<string, number>;
+  stages: Array<{ key: DealStage; label: string; probability: number }>;
+}
+
+export interface Activity {
+  id: number;
+  created_at: string | null;
+  activity_type: string;
+  rep: string;
+  outcome: string;
+  notes: string;
+  rating: number;
+  duration_minutes: number;
+  next_action: string;
+  next_action_date: string | null;
+  store_id: number | null;
+  store_number: number | null;
+  account: string | null;
+  city: string | null;
+  horeca_account_id: number | null;
+  horeca_name: string | null;
+}
+
+export interface ActivityCreate {
+  rep: string;
+  activity_type: string;
+  store_number?: number;
+  store_id?: number;
+  horeca_account_id?: number;
+  outcome?: string;
+  notes?: string;
+  rating?: number;
+  duration_minutes?: number;
+  next_action?: string;
+  next_action_date?: string;
+  lat?: number;
+  lng?: number;
+  sku_outcomes?: Array<{ sku: string; outcome: string; facings?: number; competitor_notes?: string }>;
+  advance_pipeline_stage?: DealStage;
+}
+
+export interface QuotaTargets {
+  activities: number;
+  visits: number;
+  new_listings: number;
+  units: number;
+  revenue: number;
+}
+export interface QuotaAchieved {
+  activities: number;
+  visits: number;
+  new_listings: number;
+  units: number;
+  revenue: number;
+}
+export interface Quota {
+  id: number;
+  rep: string;
+  quarter: string;
+  period_start: string;
+  period_end: string;
+  targets: QuotaTargets;
+  achieved: QuotaAchieved;
+  pct: { activities: number | null; visits: number | null; new_listings: number | null };
+  notes: string;
+}
+export interface QuotasPayload {
+  quarter: string;
+  quotas: Quota[];
+}
+export interface QuotaCreate {
+  rep: string;
+  quarter?: string;
+  target_activities?: number;
+  target_visits?: number;
+  target_new_listings?: number;
+  target_units?: number;
+  target_revenue?: number;
+  notes?: string;
+}
+
+export interface VelocityStore {
+  store_number: number;
+  week_velocity: number | null;
+  days_to_oos: number | null;
+  current_on_hand: number;
+  prior_on_hand: number;
+  prior_date: string | null;
+}
+export interface VelocityPayload {
+  sku: string;
+  brand: string;
+  product_name: string;
+  window_days: number;
+  overall: VelocityStore;
+  per_store_top: VelocityStore[];
+  freshness: Freshness;
+}
+
+export interface ShelfShareCategory {
+  category: string;
+  our_facings: number;
+  total_facings: number;
+  our_on_hand: number;
+  total_on_hand: number;
+  share_by_facings_pct: number;
+  share_by_on_hand_pct: number;
+}
+export interface ShelfSharePayload {
+  store_number: number;
+  snapshot_date: string | null;
+  categories: ShelfShareCategory[];
+}
+
+export interface PortfolioTrendPayload {
+  days: number;
+  since: string;
+  series: Array<{
+    date: string;
+    listed: number;
+    delisting: number;
+    fully_delisted: number;
+    total_on_hand: number;
+    skus_with_data: number;
+  }>;
+  freshness: Freshness;
+}
+
+export interface IngestCalendarDay {
+  date: string;
+  weekday: string;
+  has_snapshot: boolean;
+  latest_run_at: string | null;
+  success_runs: number;
+  failed_runs: number;
+  sources: string;
+  is_today: boolean;
+}
+export interface IngestCalendarPayload {
+  days: number;
+  calendar: IngestCalendarDay[];
+}
+
+export interface StoreFullPayload {
+  store: {
+    id: number;
+    store_number: number;
+    account: string;
+    address: string;
+    city: string;
+    postal: string;
+    phone: string;
+    email: string;
+    priority: string;
+    rep: string;
+    lat: number;
+    lng: number;
+    manager_name: string;
+    asst_manager_name: string;
+    manager_phone: string;
+    store_email: string;
+    territory_id: number | null;
+    territory_code: string;
+    territory_name: string;
+    territory_color: string;
+  };
+  snapshot_date: string | null;
+}
+
+export interface ReplaceTarget {
+  competitor_sku: string;
+  competitor_name: string;
+  competitor_brand: string;
+  competitor_status: string;
+  competitor_on_hand: number;
+  opportunity_score: number;
+}
+export interface ReplaceCategory {
+  category: string;
+  pitch_our_sku: string;
+  pitch_our_brand: string;
+  pitch_our_product: string;
+  targets: ReplaceTarget[];
+}
+export interface ReplaceTargetsPayload {
+  store_number: number;
+  snapshot_date: string | null;
+  categories: ReplaceCategory[];
 }

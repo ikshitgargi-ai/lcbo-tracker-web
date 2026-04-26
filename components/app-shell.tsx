@@ -19,15 +19,23 @@ import {
   Navigation,
   Sparkles,
   Zap,
+  Calendar,
+  Plus,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Primary nav (mobile + desktop). Order matters.
+// Primary nav: action-oriented (Today, Log, Pipeline) come first.
+// Bottom-tab on mobile uses the first 5.
 const NAV = [
+  { href: '/today', label: 'Today', icon: Calendar },
+  { href: '/log', label: 'Log', icon: Plus },
+  { href: '/pipeline', label: 'Pipeline', icon: Target },
+  { href: '/listings', label: 'Listings', icon: Zap },
+  { href: '/oos', label: 'OOS', icon: AlertTriangle },
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/listings', label: 'Listings', icon: Zap, highlight: true },
-  { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
-  { href: '/opportunities', label: 'Opportunities', icon: Target },
+  { href: '/opportunities', label: 'Opportunities', icon: TrendingUp },
+  { href: '/activity', label: 'Activity Feed', icon: Activity },
   { href: '/nearby', label: 'Nearby', icon: Navigation },
   { href: '/ask', label: 'Ask AI', icon: Sparkles },
 ];
