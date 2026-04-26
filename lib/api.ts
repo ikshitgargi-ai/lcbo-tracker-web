@@ -231,6 +231,20 @@ export const api = {
     request<{ inserted: number; status: string }>('/api/crm/backfill-store-changes', {
       method: 'POST',
     }),
+
+  // ===== Manual listing entry + new-shipment detection =====
+  logListing: (body: { sku: string; store_number: number; change_date?: string }) =>
+    request<{ status: string; id: number | null; sku: string; brand: string; product_name: string; store_number: number; change_date: string }>(
+      '/api/crm/log-listing',
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  inventoryAdds: (params: { days?: number; sku?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.days != null) qs.set('days', String(params.days));
+    if (params.sku) qs.set('sku', params.sku);
+    const s = qs.toString();
+    return request<InventoryAddsPayload>(`/api/crm/inventory-adds${s ? `?${s}` : ''}`);
+  },
 };
 
 // ===== Types =====
@@ -963,7 +977,12 @@ export interface DistributionAddition {
   current_status: string | null;
 }
 export interface DistributionAdditionsPayload {
-  days: number;
+  days_requested: number;
+  days_of_history_available: number;
+  earliest_snapshot: string | null;
+  latest_snapshot: string | null;
+  // legacy alias for backward compat in case old fields are referenced
+  days?: number;
   since: string;
   total: number;
   per_sku: Array<{
@@ -975,5 +994,41 @@ export interface DistributionAdditionsPayload {
     lost_again: number;
   }>;
   additions: DistributionAddition[];
+  freshness: Freshness;
+}
+
+export interface InventoryAddEvent {
+  sku: string;
+  brand: string;
+  product_name: string;
+  store_number: number;
+  snapshot_date: string;
+  on_hand: number;
+  prev_on_hand: number;
+  prev_date: string | null;
+  jump: number;
+  account: string | null;
+  city: string | null;
+  postal: string | null;
+  rep: string | null;
+  territory_name: string;
+  territory_color: string;
+}
+export interface InventoryAddsPayload {
+  days_requested: number;
+  days_of_history_available: number;
+  earliest_snapshot: string | null;
+  latest_snapshot: string | null;
+  since: string;
+  total: number;
+  per_sku: Array<{
+    sku: string;
+    brand: string;
+    product_name: string;
+    event_count: number;
+    unique_stores: number;
+    total_units_added: number;
+  }>;
+  events: InventoryAddEvent[];
   freshness: Freshness;
 }

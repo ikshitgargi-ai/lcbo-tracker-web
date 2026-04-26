@@ -28,19 +28,19 @@ import {
 import { cn } from '@/lib/utils';
 
 // Primary nav: 5 things on the bottom tab bar (mobile), expanded list in drawer.
-// Order: HOME → BRANDS → LOG → TODAY → PIPELINE
+// Consolidated: /listings + /new-distribution + /inventory-adds = /intel (one tabbed page).
+// Order: HOME → BRANDS → INTEL → TODAY → LOG
 const NAV = [
   { href: '/', label: 'Home', icon: LayoutDashboard },
   { href: '/brands', label: 'Brands', icon: Tag },
-  { href: '/log', label: 'Log', icon: Plus },
+  { href: '/intel', label: 'Intel', icon: Activity },
   { href: '/today', label: 'Today', icon: Calendar },
+  { href: '/log', label: 'Log', icon: Plus },
+  // Drawer-only (after the bottom-tab-bar slice of 5):
   { href: '/pipeline', label: 'Pipeline', icon: Target },
-  // visible only in drawer/sidebar (after the bottom-tab-bar slice of 5):
-  { href: '/new-distribution', label: 'New Distribution', icon: TrendingUp },
-  { href: '/listings', label: 'Listings Feed', icon: Zap },
   { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
   { href: '/opportunities', label: 'Opportunities', icon: Trophy },
-  { href: '/activity', label: 'Activity Feed', icon: Activity },
+  { href: '/activity', label: 'Activity Feed', icon: Zap },
   { href: '/nearby', label: 'Nearby', icon: Navigation },
   { href: '/ask', label: 'Ask AI', icon: Sparkles },
 ];

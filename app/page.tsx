@@ -186,7 +186,7 @@ export default function HomePage() {
             New Distribution
           </h2>
           <Link
-            href="/new-distribution"
+            href="/intel"
             className="text-sm text-[var(--color-accent)] flex items-center gap-1"
           >
             All 60d <ChevronRight size={14} />
@@ -275,7 +275,7 @@ export default function HomePage() {
           </div>
           <div className="text-xs text-muted mt-1">≤ 2 units</div>
         </Link>
-        <Link href="/listings" className="m-card">
+        <Link href="/intel" className="m-card">
           <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted font-semibold">
             <span>Delisted 7d</span>
             <TrendingDown size={14} style={{ color: 'var(--color-warning)' }} />
@@ -302,7 +302,7 @@ export default function HomePage() {
               <ActivityIcon size={18} className="text-[var(--color-accent)]" /> Recent changes
             </h2>
             <Link
-              href="/listings"
+              href="/intel"
               className="text-sm text-[var(--color-accent)] flex items-center gap-1"
             >
               All <ChevronRight size={14} />
@@ -371,7 +371,7 @@ export default function HomePage() {
             color="#a78bfa"
           />
           <QuickAction
-            href="/listings"
+            href="/intel"
             icon={<ActivityIcon size={20} />}
             label="Listings Feed"
             color="#74b9ff"
