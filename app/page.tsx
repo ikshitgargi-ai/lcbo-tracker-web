@@ -24,6 +24,7 @@ import { api } from '@/lib/api';
 import { useActiveRep } from '@/lib/active-rep';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Button } from '@/components/ui/button';
+import { StoreLookup } from '@/components/store-lookup';
 import { formatNumber, formatDate, statusBadgeClass, statusLabel, relativeTime } from '@/lib/utils';
 
 /**
@@ -880,14 +881,7 @@ function QuickLogSheet({
                 </select>
               </Field>
               <Field label="Store number">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={storeNumber}
-                  onChange={(e) => setStoreNumber(e.target.value)}
-                  placeholder="e.g. 217"
-                  className="select"
-                />
+                <StoreLookup value={storeNumber} onChange={setStoreNumber} />
               </Field>
               <Field label="When">
                 <input
@@ -907,14 +901,7 @@ function QuickLogSheet({
                 </div>
               )}
               <Field label="Store number">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={storeNumber}
-                  onChange={(e) => setStoreNumber(e.target.value)}
-                  placeholder="e.g. 217"
-                  className="select"
-                />
+                <StoreLookup value={storeNumber} onChange={setStoreNumber} />
               </Field>
               <Field label="Activity">
                 <select
