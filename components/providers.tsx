@@ -6,14 +6,28 @@ import { Toaster } from 'sonner';
 import { useState } from 'react';
 import { ServiceWorkerRegister } from './sw-register';
 
+/**
+ * App-wide TanQuery client.
+ *
+ * staleTime: 30s — data considered fresh for 30s, then refetches on focus/mount.
+ * refetchOnWindowFocus: true — coming back to the tab pulls latest.
+ * refetchOnReconnect: true — restoring network triggers refetch.
+ * refetchInterval: 60s background — passive auto-refresh while tab is open.
+ *
+ * Pages that need faster cadence (e.g. /sod with sync-in-progress) can override
+ * via the `refetchInterval` option per-query.
+ */
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60_000,
-            refetchOnWindowFocus: false,
+            staleTime: 30_000,
+            refetchInterval: 60_000,
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
+            refetchIntervalInBackground: false,
             retry: 1,
           },
         },
