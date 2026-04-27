@@ -277,6 +277,25 @@ export const api = {
       `/api/crm/territories/${territoryId}/assign-stores`,
       { method: 'POST', body: JSON.stringify(body) },
     ),
+
+  // ===== NB Distillers premium tracker =====
+  nbTracker: () => request<NbTrackerPayload>('/api/crm/nb-tracker'),
+
+  // ===== Admin: rep roster =====
+  roster: () => request<{ roster: string[]; placeholder_for_unassigned: string }>('/api/crm/admin/roster'),
+  setRoster: (body: { roster?: string[]; placeholder?: string } = {}) =>
+    request<{
+      status: string;
+      roster: string[];
+      cleared_stores_count: number;
+      territories_reset_to_placeholder: number;
+      placeholder: string;
+    }>('/api/crm/admin/set-roster', { method: 'POST', body: JSON.stringify(body) }),
+  bulkReassignRep: (body: { from_rep: string; to_rep: string }) =>
+    request<{ status: string; reassigned: number; to_rep: string }>(
+      '/api/crm/admin/bulk-reassign-rep',
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
 };
 
 // ===== Types =====
@@ -1168,6 +1187,111 @@ export interface ManagerTerritoryRow {
   rep_name: string;
   store_count: number;
 }
+export interface NbTrackerPayload {
+  brand: string;
+  tagline: string;
+  skus: string[];
+  per_sku: Array<{
+    sku: string;
+    brand: string;
+    product_name: string;
+    lcbo_url: string;
+    snapshot_date: string | null;
+    listed: number;
+    delisting: number;
+    fully_delisted: number;
+    total_on_hand: number;
+    avg_on_hand_at_listed: number;
+  }>;
+  totals: {
+    total_skus: number;
+    total_listed_stores: number;
+    total_delisting_stores: number;
+    total_on_hand_units: number;
+    additions_60d: number;
+    delistings_60d: number;
+    oos_risk_count: number;
+    tasting_followups_count: number;
+  };
+  top_stores: Array<{
+    store_number: number;
+    sku: string;
+    product_name: string;
+    status: string;
+    on_hand: number;
+    account: string | null;
+    city: string | null;
+    territory_name: string;
+    territory_color: string;
+  }>;
+  additions_60d: Array<{
+    sku: string;
+    product_name: string;
+    store_number: number;
+    change_date: string;
+    change_type: string;
+    account: string | null;
+    city: string | null;
+    territory_name: string;
+    territory_color: string;
+    current_on_hand: number;
+    current_status: string | null;
+  }>;
+  delistings_60d: Array<{
+    sku: string;
+    product_name: string;
+    store_number: number;
+    change_date: string;
+    change_type: string;
+    old_status: string | null;
+    new_status: string | null;
+    account: string | null;
+    city: string | null;
+    territory_name: string;
+    territory_color: string;
+  }>;
+  oos_risk: Array<{
+    sku: string;
+    product_name: string;
+    store_number: number;
+    on_hand: number;
+    severity: string;
+    account: string | null;
+    city: string | null;
+    territory_name: string;
+    territory_color: string;
+  }>;
+  tasting_followups: Array<{
+    sku: string;
+    product_name: string;
+    store_number: number;
+    tasting_date: string;
+    days_since_tasting: number | null;
+    tasting_outcome: string;
+    rep: string;
+    account: string | null;
+    city: string | null;
+    territory_name: string;
+    territory_color: string;
+    current_sod_status: string | null;
+  }>;
+  territory_coverage: Array<{
+    code: string;
+    name: string;
+    color: string;
+    nb_stores: number;
+    total_stores: number;
+    coverage_pct: number;
+  }>;
+  trend_30d: Array<{
+    date: string;
+    listed: number;
+    delisting: number;
+    total_on_hand: number;
+  }>;
+  freshness: Freshness;
+}
+
 export interface ManagerDashboardPayload {
   days_activity: number;
   days_listings: number;

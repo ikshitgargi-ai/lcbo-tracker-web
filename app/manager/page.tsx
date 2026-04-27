@@ -16,6 +16,7 @@ import {
   Edit3,
   Save,
   X as XIcon,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, type ManagerRepRow, type ManagerTerritoryRow } from '@/lib/api';
@@ -471,6 +472,15 @@ function TerritoriesTab({
   const [editing, setEditing] = useState<number | null>(null);
   const [draftRep, setDraftRep] = useState('');
 
+  const roster = useQuery({ queryKey: ['roster'], queryFn: api.roster });
+  const officialRoster = roster.data?.roster ?? ['Neeraj', 'Virat', 'Namit', 'Ikshit'];
+
+  // Picker shows the official roster + any rep currently in stores
+  const allRepNames = Array.from(new Set([
+    ...officialRoster,
+    ...reps.map((r) => r.rep),
+  ])).sort();
+
   const update = useMutation({
     mutationFn: (vars: { id: number; rep: string }) =>
       api.assignStoresToTerritory(vars.id, { store_numbers: [], rep_name: vars.rep }),
@@ -479,6 +489,19 @@ function TerritoriesTab({
       qc.invalidateQueries({ queryKey: ['manager-dashboard'] });
       qc.invalidateQueries({ queryKey: ['territories'] });
       setEditing(null);
+    },
+    onError: (err: unknown) => toast.error((err as Error).message),
+  });
+
+  const resetRoster = useMutation({
+    mutationFn: () => api.setRoster({}),
+    onSuccess: (r) => {
+      toast.success(
+        `Reset complete. Cleared ${r.cleared_stores_count} non-roster reps. ${r.territories_reset_to_placeholder} territories now use placeholder.`,
+      );
+      qc.invalidateQueries({ queryKey: ['manager-dashboard'] });
+      qc.invalidateQueries({ queryKey: ['territories'] });
+      qc.invalidateQueries({ queryKey: ['reps'] });
     },
     onError: (err: unknown) => toast.error((err as Error).message),
   });
@@ -492,10 +515,34 @@ function TerritoriesTab({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Territory Builder</CardTitle>
-        <CardDescription>
-          Assign a rep to each territory. Reps already in the system: {reps.length}.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <CardTitle>Territory Builder</CardTitle>
+            <CardDescription>
+              Assign a rep to each territory. Official roster:{' '}
+              <span className="font-semibold text-[var(--color-foreground)]">
+                {officialRoster.join(' · ')}
+              </span>
+            </CardDescription>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              if (
+                confirm(
+                  `Reset roster to ${officialRoster.join(', ')}?\n\nThis clears any non-roster rep assignment from stores and labels unassigned territories as 'New Rep 1'. Activities and historical data are preserved.`,
+                )
+              ) {
+                resetRoster.mutate();
+              }
+            }}
+            disabled={resetRoster.isPending}
+          >
+            <RefreshCw size={14} className={resetRoster.isPending ? 'animate-spin' : ''} />
+            {resetRoster.isPending ? 'Resetting…' : 'Reset to roster'}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -528,11 +575,13 @@ function TerritoriesTab({
                             className="select text-xs flex-1"
                           >
                             <option value="">— pick rep —</option>
-                            {reps.map((r) => (
-                              <option key={r.rep} value={r.rep}>
-                                {r.rep}
+                            {allRepNames.map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                                {officialRoster.includes(name) ? ' ★' : ''}
                               </option>
                             ))}
+                            <option value="New Rep 1">New Rep 1 (placeholder)</option>
                           </select>
                           <Button
                             size="sm"
