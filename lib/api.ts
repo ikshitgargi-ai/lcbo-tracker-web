@@ -263,6 +263,20 @@ export const api = {
     const s = qs.toString();
     return request<EventLogPayload>(`/api/crm/event-log${s ? `?${s}` : ''}`);
   },
+
+  // ===== Manager dashboard =====
+  managerDashboard: (params: { days_activity?: number; days_listings?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.days_activity != null) qs.set('days_activity', String(params.days_activity));
+    if (params.days_listings != null) qs.set('days_listings', String(params.days_listings));
+    const s = qs.toString();
+    return request<ManagerDashboardPayload>(`/api/crm/manager-dashboard${s ? `?${s}` : ''}`);
+  },
+  assignStoresToTerritory: (territoryId: number, body: { store_numbers: number[]; rep_name?: string }) =>
+    request<{ status: string; assigned: number; territory_id: number; rep: string | null }>(
+      `/api/crm/territories/${territoryId}/assign-stores`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
 };
 
 // ===== Types =====
@@ -1124,4 +1138,50 @@ export interface EventLogPayload {
   events: EventLogEntry[];
   days: number;
   total: number;
+}
+
+export interface ManagerRepRow {
+  rep: string;
+  store_count: number;
+  gap_count: number;
+  activities_30d: number;
+  visits_30d: number;
+  tastings_30d: number;
+  outreach_30d: number;
+  listings_won_60d: number;
+  new_stores_60d: number;
+  delistings_60d: number;
+  quota_activities: number;
+  quota_visits: number;
+  quota_new_listings: number;
+  pct_quota_activities: number | null;
+  pct_quota_visits: number | null;
+  pct_quota_listings: number | null;
+  gap_pct: number | null;
+}
+export interface ManagerTerritoryRow {
+  id: number;
+  code: string;
+  name: string;
+  region: string;
+  color: string;
+  rep_name: string;
+  store_count: number;
+}
+export interface ManagerDashboardPayload {
+  days_activity: number;
+  days_listings: number;
+  reps: ManagerRepRow[];
+  territories: ManagerTerritoryRow[];
+  totals: {
+    reps: number;
+    territories: number;
+    total_stores: number;
+    total_listings_won_60d: number;
+    total_new_stores_60d: number;
+    total_delistings_60d: number;
+    total_activities_30d: number;
+    total_gap: number;
+  };
+  freshness: Freshness;
 }

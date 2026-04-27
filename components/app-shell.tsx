@@ -29,29 +29,27 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Primary nav: 5 things on the bottom tab bar (mobile), expanded list in drawer.
-// On the homepage, the first 5 tabs SCROLL to anchor sections instead of navigating
-// to a new URL — this gives the "one app" feel the user asked for.
-// `anchor` field = the #section id within /. If pathname is /, clicking the tab
-// smooth-scrolls to that section. Otherwise, it navigates to / first then scrolls.
+// PRIMARY rep nav (5 mobile bottom-tab items). Anchor scroll within the home page
+// so reps never feel like they're "leaving the app." Plus ONE manager link.
 const NAV = [
   { href: '/', label: 'Home', icon: LayoutDashboard, anchor: 'top' },
   { href: '/#brands', label: 'Brands', icon: Tag, anchor: 'brands' },
   { href: '/#intel', label: 'Intel', icon: Activity, anchor: 'intel' },
   { href: '/#today', label: 'Today', icon: Calendar, anchor: 'today' },
-  { href: '/#pipeline', label: 'Pipeline', icon: Target, anchor: 'pipeline' },
-  // Drawer-only (after the bottom-tab-bar slice of 5):
+  { href: '/manager', label: 'Manager', icon: Trophy },
+  // Drawer-only (after the 5-tab bar):
   { href: '/log', label: 'Log Visit', icon: Plus },
-  { href: '/follow-ups', label: 'Follow-ups', icon: AlertTriangle },
-  { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
-  { href: '/opportunities', label: 'Opportunities', icon: Trophy },
-  { href: '/activity', label: 'Activity Feed', icon: Zap },
-  { href: '/nearby', label: 'Nearby', icon: Navigation },
+  { href: '/follow-ups', label: 'Tasting Follow-ups', icon: AlertTriangle },
+  { href: '/pipeline', label: 'Pipeline', icon: Target },
+  { href: '/nearby', label: 'Nearby (GPS)', icon: Navigation },
   { href: '/ask', label: 'Ask AI', icon: Sparkles },
 ];
 
-// Secondary nav — shown in full drawer/sidebar but lower priority
+// Secondary — only visible if explicitly opened (drawer "More" section)
 const NAV_SECONDARY = [
+  { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
+  { href: '/opportunities', label: 'Opportunities', icon: Trophy },
+  { href: '/activity', label: 'Activity Feed', icon: Zap },
   { href: '/sod', label: 'SOD Status', icon: Database },
   { href: '/map', label: 'Store Map', icon: MapPin },
   { href: '/territories', label: 'Territories', icon: Globe2 },
