@@ -28,16 +28,18 @@ import {
 import { cn } from '@/lib/utils';
 
 // Primary nav: 5 things on the bottom tab bar (mobile), expanded list in drawer.
-// Consolidated: /listings + /new-distribution + /inventory-adds = /intel (one tabbed page).
-// Order: HOME → BRANDS → INTEL → TODAY → LOG
+// On the homepage, the first 5 tabs SCROLL to anchor sections instead of navigating
+// to a new URL — this gives the "one app" feel the user asked for.
+// `anchor` field = the #section id within /. If pathname is /, clicking the tab
+// smooth-scrolls to that section. Otherwise, it navigates to / first then scrolls.
 const NAV = [
-  { href: '/', label: 'Home', icon: LayoutDashboard },
-  { href: '/brands', label: 'Brands', icon: Tag },
-  { href: '/intel', label: 'Intel', icon: Activity },
-  { href: '/today', label: 'Today', icon: Calendar },
-  { href: '/log', label: 'Log', icon: Plus },
+  { href: '/', label: 'Home', icon: LayoutDashboard, anchor: 'top' },
+  { href: '/#brands', label: 'Brands', icon: Tag, anchor: 'brands' },
+  { href: '/#intel', label: 'Intel', icon: Activity, anchor: 'intel' },
+  { href: '/#today', label: 'Today', icon: Calendar, anchor: 'today' },
+  { href: '/#pipeline', label: 'Pipeline', icon: Target, anchor: 'pipeline' },
   // Drawer-only (after the bottom-tab-bar slice of 5):
-  { href: '/pipeline', label: 'Pipeline', icon: Target },
+  { href: '/log', label: 'Log Visit', icon: Plus },
   { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
   { href: '/opportunities', label: 'Opportunities', icon: Trophy },
   { href: '/activity', label: 'Activity Feed', icon: Zap },
@@ -151,16 +153,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile bottom tab bar — always visible */}
+      {/* Mobile bottom tab bar — always visible. Anchor tabs scroll instead of navigating. */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[rgba(10,12,16,0.96)] backdrop-blur border-t border-[var(--color-card-border)] safe-bottom">
         <div className="flex items-stretch justify-around">
           {NAV.slice(0, 5).map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href;
+            const isAnchor = !!item.anchor;
+            const onHome = pathname === '/';
+            const active = isAnchor && onHome ? false : pathname === item.href;
+            const handleClick = (e: React.MouseEvent) => {
+              if (isAnchor && onHome) {
+                e.preventDefault();
+                if (item.anchor === 'top') {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  document.getElementById(item.anchor!)?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  });
+                }
+              }
+              // Otherwise let Next.js Link navigate normally
+            };
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={handleClick}
                 className={cn(
                   'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px]',
                   active ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]',
