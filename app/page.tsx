@@ -63,6 +63,10 @@ export default function HomePage() {
     queryKey: ['lcbo-live', 30],
     queryFn: () => api.lcboLiveDiscoveries(30),
   });
+  const followups = useQuery({
+    queryKey: ['tasting-followups', 180],
+    queryFn: () => api.tastingFollowups(180),
+  });
   const deals = useQuery({ queryKey: ['deals', { active_only: true }], queryFn: () => api.deals({}) });
   const activity = useQuery({
     queryKey: ['activities', { days: 14 }],
@@ -352,6 +356,67 @@ export default function HomePage() {
           </>
         )}
       </section>
+
+      {/* SECTION: FOLLOW-UPS (tasting done, no listing) — only show if any */}
+      {followups.data && followups.data.total > 0 && (
+        <section id="followups" className="scroll-mt-20 space-y-2.5">
+          <SectionHeader
+            icon={<TrendingUp size={18} />}
+            title="Tasting Follow-ups"
+            linkLabel="All"
+            linkHref="/follow-ups"
+          />
+          <p className="text-xs text-muted -mt-1">
+            We tasted / left samples here, but SKU still isn&apos;t on shelf.
+          </p>
+          <div className="space-y-2">
+            {followups.data.followups.slice(0, 4).map((f, i) => (
+              <Link
+                key={i}
+                href={`/stores/${f.store_number}`}
+                className="m-card block"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      <span
+                        className="change-chip"
+                        style={{
+                          background:
+                            f.priority_score >= 80
+                              ? 'rgba(239,75,75,0.18)'
+                              : 'rgba(253,203,110,0.18)',
+                          color:
+                            f.priority_score >= 80
+                              ? 'var(--color-danger)'
+                              : 'var(--color-warning)',
+                        }}
+                      >
+                        {f.tasting_outcome || f.activity_type}
+                      </span>
+                      {f.current_sod_status === 'D' && (
+                        <span className="change-chip change-DELISTED">SOD: D</span>
+                      )}
+                      {!f.current_sod_status && (
+                        <span className="change-chip change-BASELINE">missing</span>
+                      )}
+                    </div>
+                    <div className="font-medium text-sm truncate">
+                      #{f.store_number} · {f.account ?? '—'}
+                    </div>
+                    <div className="text-xs text-muted truncate">
+                      {f.brand} {f.product_name} · {f.city}
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted shrink-0 text-right">
+                    {f.days_since_tasting != null ? `${f.days_since_tasting}d ago` : '—'}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* SECTION: LCBO LIVE DISCOVERIES (only show if any) */}
       {lcboLive.data && lcboLive.data.total > 0 && (
@@ -725,6 +790,7 @@ function QuickLogSheet({
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [activityType, setActivityType] = useState<'store_visit' | 'tasting' | 'sample_drop' | 'call' | 'email'>('store_visit');
   const [notes, setNotes] = useState('');
+  const [visitDate, setVisitDate] = useState(new Date().toISOString().slice(0, 10));
 
   const logListing = useMutation({
     mutationFn: () =>
@@ -748,6 +814,7 @@ function QuickLogSheet({
         store_number: parseInt(storeNumber, 10),
         activity_type: activityType,
         notes,
+        visit_date: visitDate,
       }),
     onSuccess: () => {
       toast.success('Activity logged');
@@ -861,6 +928,18 @@ function QuickLogSheet({
                   <option value="call">Call</option>
                   <option value="email">Email</option>
                 </select>
+              </Field>
+              <Field label="When did this happen?">
+                <input
+                  type="date"
+                  value={visitDate}
+                  onChange={(e) => setVisitDate(e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className="select"
+                />
+                <span className="text-[10px] text-muted mt-1 block">
+                  Backdating works — log a tasting from last week, last month, etc.
+                </span>
               </Field>
               <Field label="Notes">
                 <textarea

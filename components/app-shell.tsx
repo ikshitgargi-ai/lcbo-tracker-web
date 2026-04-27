@@ -42,6 +42,7 @@ const NAV = [
   { href: '/#pipeline', label: 'Pipeline', icon: Target, anchor: 'pipeline' },
   // Drawer-only (after the bottom-tab-bar slice of 5):
   { href: '/log', label: 'Log Visit', icon: Plus },
+  { href: '/follow-ups', label: 'Follow-ups', icon: AlertTriangle },
   { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
   { href: '/opportunities', label: 'Opportunities', icon: Trophy },
   { href: '/activity', label: 'Activity Feed', icon: Zap },

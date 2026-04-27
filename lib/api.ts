@@ -251,6 +251,18 @@ export const api = {
     request<LcboLiveDiscoveriesPayload>(`/api/crm/lcbo-live-discoveries?days=${days}`),
   lcboRescan: () =>
     request<{ status: string; note: string }>('/api/crm/lcbo-rescan', { method: 'POST' }),
+
+  // ===== Storage backbone =====
+  tastingFollowups: (days = 365) =>
+    request<TastingFollowupsPayload>(`/api/crm/tasting-followups?days=${days}`),
+  eventLog: (params: { days?: number; entity_type?: string; actor?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.days != null) qs.set('days', String(params.days));
+    if (params.entity_type) qs.set('entity_type', params.entity_type);
+    if (params.actor) qs.set('actor', params.actor);
+    const s = qs.toString();
+    return request<EventLogPayload>(`/api/crm/event-log${s ? `?${s}` : ''}`);
+  },
 };
 
 // ===== Types =====
@@ -749,6 +761,8 @@ export interface ActivityCreate {
   duration_minutes?: number;
   next_action?: string;
   next_action_date?: string;
+  /** When the activity ACTUALLY happened (allows backdating). Defaults to today. */
+  visit_date?: string;
   lat?: number;
   lng?: number;
   sku_outcomes?: Array<{ sku: string; outcome: string; facings?: number; competitor_notes?: string }>;
@@ -1062,4 +1076,52 @@ export interface LcboLiveDiscoveriesPayload {
   total: number;
   discoveries: LcboLiveDiscovery[];
   freshness: Freshness;
+}
+
+export interface TastingFollowup {
+  sku: string;
+  brand: string;
+  product_name: string;
+  store_number: number;
+  store_id: number | null;
+  account: string | null;
+  city: string | null;
+  postal: string | null;
+  territory_name: string;
+  territory_color: string;
+  tasting_date: string;
+  days_since_tasting: number | null;
+  tasting_outcome: string;
+  tasting_facings: number;
+  activity_id: number;
+  activity_type: string;
+  activity_outcome: string;
+  activity_notes: string;
+  rep: string;
+  current_sod_status: string | null;
+  current_sod_on_hand: number;
+  priority_score: number;
+}
+export interface TastingFollowupsPayload {
+  days: number;
+  since: string;
+  total: number;
+  followups: TastingFollowup[];
+}
+
+export interface EventLogEntry {
+  id: number;
+  event_type: string;
+  entity_type: string;
+  entity_id: string | null;
+  actor: string;
+  payload_json: string;
+  ip_address: string;
+  user_agent: string;
+  created_at: string;
+}
+export interface EventLogPayload {
+  events: EventLogEntry[];
+  days: number;
+  total: number;
 }
