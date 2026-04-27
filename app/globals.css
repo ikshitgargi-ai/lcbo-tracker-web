@@ -269,3 +269,34 @@ input[type="submit"] {
 /* Utility */
 .muted-small { color: var(--color-muted); font-size: 0.75rem; }
 .text-muted { color: var(--color-muted); }
+
+/* Live ticker scroll */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-ticker {
+  animation: ticker 60s linear infinite;
+}
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
+/* Palantir-density mode: tighter padding, more info */
+@media (min-width: 1024px) {
+  .m-card { padding: 0.75rem 0.875rem; border-radius: 10px; }
+  .m-card.dense { padding: 0.5rem 0.75rem; }
+  .data-table th, .data-table td { padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
+}
+
+/* Smooth scroll for anchor jumps */
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+/* Provenance label */
+.provenance {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+}

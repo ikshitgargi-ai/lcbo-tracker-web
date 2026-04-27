@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { CommandBar } from './command-bar';
+import { LiveTicker } from './live-ticker';
 import {
   LayoutDashboard,
   Activity,
@@ -76,6 +78,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-brand-grad">
+      {/* Always-on global search (Cmd+K) — renders the trigger inline + the modal portal-style */}
+      <CommandBar />
+
       {/* Mobile top bar */}
       <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 border-b border-[var(--color-card-border)] bg-[rgba(10,12,16,0.8)] backdrop-blur safe-top">
         <Link href="/" className="flex items-center gap-2">
@@ -195,6 +200,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content — with bottom padding for mobile tab bar */}
       <main className="lg:pl-64 min-h-[100dvh]">
+        {/* Desktop top bar: search + ticker. Mobile already has its own header above */}
+        <div className="hidden lg:flex sticky top-0 z-20 items-center gap-3 px-6 h-14 bg-[rgba(10,12,16,0.85)] backdrop-blur border-b border-[var(--color-card-border)]">
+          <div className="flex-1">
+            <CommandBar />
+          </div>
+          <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+            <span className="pulse-dot" />
+            <span className="font-semibold uppercase tracking-wider">Live · 24/7</span>
+          </div>
+        </div>
+        {/* Live ticker sits right under top bar on all device sizes >=sm */}
+        <LiveTicker />
         <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 pb-24 lg:pb-6 max-w-[1400px] mx-auto">
           {children}
         </div>
