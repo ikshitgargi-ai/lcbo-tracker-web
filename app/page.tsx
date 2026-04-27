@@ -59,6 +59,10 @@ export default function HomePage() {
   const dash = useQuery({ queryKey: ['crm-dashboard'], queryFn: api.crmDashboard });
   const digest = useQuery({ queryKey: ['digest', 7], queryFn: () => api.listingDigest(7) });
   const oos = useQuery({ queryKey: ['oos', 2], queryFn: () => api.oosRisk({ threshold: 2 }) });
+  const lcboLive = useQuery({
+    queryKey: ['lcbo-live', 30],
+    queryFn: () => api.lcboLiveDiscoveries(30),
+  });
   const deals = useQuery({ queryKey: ['deals', { active_only: true }], queryFn: () => api.deals({}) });
   const activity = useQuery({
     queryKey: ['activities', { days: 14 }],
@@ -348,6 +352,56 @@ export default function HomePage() {
           </>
         )}
       </section>
+
+      {/* SECTION: LCBO LIVE DISCOVERIES (only show if any) */}
+      {lcboLive.data && lcboLive.data.total > 0 && (
+        <section id="lcbo-live" className="scroll-mt-20 space-y-2.5">
+          <SectionHeader
+            icon={<TrendingUp size={18} />}
+            title="LCBO Live Discoveries"
+            linkLabel="All"
+            linkHref="/intel"
+          />
+          <p className="text-xs text-muted -mt-1">
+            Stores where lcbo.com shows our SKU live but SOD doesn&apos;t. Refresh every 2h.
+          </p>
+          <div className="space-y-2">
+            {lcboLive.data.discoveries.slice(0, 4).map((d, i) => (
+              <Link
+                key={i}
+                href={`/stores/${d.store_number}`}
+                className="m-card block border-[#a78bfa]/40"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      <span
+                        className="change-chip"
+                        style={{ background: 'rgba(167,139,250,0.2)', color: '#a78bfa' }}
+                      >
+                        LCBO LIVE
+                      </span>
+                      {d.current_sod_status === 'F' && (
+                        <span className="change-chip change-DELISTED">SOD: F</span>
+                      )}
+                      {!d.current_sod_status && (
+                        <span className="change-chip change-BASELINE">SOD: missing</span>
+                      )}
+                    </div>
+                    <div className="font-medium text-sm truncate">
+                      #{d.store_number} · {d.account ?? '—'}
+                    </div>
+                    <div className="text-xs text-muted truncate">
+                      {d.brand} {d.product_name} · {d.city}
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted shrink-0">{formatDate(d.change_date)}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* SECTION: PIPELINE */}
       <section id="pipeline" className="scroll-mt-20 space-y-2.5">

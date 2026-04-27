@@ -245,6 +245,12 @@ export const api = {
     const s = qs.toString();
     return request<InventoryAddsPayload>(`/api/crm/inventory-adds${s ? `?${s}` : ''}`);
   },
+
+  // ===== Dual-source reconciliation =====
+  lcboLiveDiscoveries: (days = 30) =>
+    request<LcboLiveDiscoveriesPayload>(`/api/crm/lcbo-live-discoveries?days=${days}`),
+  lcboRescan: () =>
+    request<{ status: string; note: string }>('/api/crm/lcbo-rescan', { method: 'POST' }),
 };
 
 // ===== Types =====
@@ -1030,5 +1036,30 @@ export interface InventoryAddsPayload {
     total_units_added: number;
   }>;
   events: InventoryAddEvent[];
+  freshness: Freshness;
+}
+
+export interface LcboLiveDiscovery {
+  sku: string;
+  brand: string;
+  product_name: string;
+  store_number: number;
+  change_date: string;
+  old_sod_status: string | null;
+  account: string | null;
+  city: string | null;
+  postal: string | null;
+  rep: string | null;
+  territory_name: string;
+  territory_color: string;
+  current_sod_status: string | null;
+  current_sod_on_hand: number;
+  last_lcbo_seen: string | null;
+}
+export interface LcboLiveDiscoveriesPayload {
+  days: number;
+  since: string;
+  total: number;
+  discoveries: LcboLiveDiscovery[];
   freshness: Freshness;
 }

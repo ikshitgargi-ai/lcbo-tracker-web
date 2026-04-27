@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { formatDateTime } from '@/lib/utils';
 import {
   TrendingUp,
   TrendingDown,
@@ -12,6 +13,8 @@ import {
   Package,
   Database,
   Activity as ActivityIcon,
+  Radar,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -20,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { formatDate, statusBadgeClass, statusLabel } from '@/lib/utils';
 
-type Tab = 'new_stores' | 'new_inventory' | 'delisted' | 'flips';
+type Tab = 'new_stores' | 'new_inventory' | 'lcbo_live' | 'delisted' | 'flips';
 
 const DAYS_OPTIONS = [30, 60, 90, 120] as const;
 
@@ -61,6 +64,20 @@ export default function IntelPage() {
     queryKey: ['digest', days],
     queryFn: () => api.listingDigest(days),
     enabled: tab === 'delisted' || tab === 'flips',
+  });
+  const lcboLive = useQuery({
+    queryKey: ['lcbo-live', days],
+    queryFn: () => api.lcboLiveDiscoveries(days),
+    enabled: tab === 'lcbo_live',
+    refetchInterval: 120_000,
+  });
+  const rescan = useMutation({
+    mutationFn: api.lcboRescan,
+    onSuccess: () => {
+      toast.success('LCBO.com rescan started — back in ~30s');
+      setTimeout(() => qc.invalidateQueries({ queryKey: ['lcbo-live'] }), 30_000);
+    },
+    onError: (err: unknown) => toast.error((err as Error).message),
   });
 
   const daysAvailable =
@@ -106,6 +123,7 @@ export default function IntelPage() {
           [
             { key: 'new_stores' as Tab, label: 'New Stores', icon: TrendingUp, color: 'var(--color-success)' },
             { key: 'new_inventory' as Tab, label: 'New Inventory', icon: Package, color: 'var(--color-accent)' },
+            { key: 'lcbo_live' as Tab, label: 'LCBO Live', icon: Radar, color: '#a78bfa' },
             { key: 'delisted' as Tab, label: 'Delisted', icon: TrendingDown, color: 'var(--color-danger)' },
             { key: 'flips' as Tab, label: 'Flips', icon: ArrowLeftRight, color: 'var(--color-warning)' },
           ] as const
@@ -333,6 +351,107 @@ export default function IntelPage() {
                       <div className="text-right shrink-0">
                         <div className="text-[10px] uppercase text-muted">on-hand</div>
                         <div className="text-lg font-bold tabular-nums">{e.on_hand}</div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* TAB: LCBO LIVE — discoveries from lcbo.com that SOD doesn't show */}
+      {tab === 'lcbo_live' && (
+        <>
+          <div className="m-card flex items-start gap-3 border-[#a78bfa]/40 bg-[rgba(167,139,250,0.05)]">
+            <Radar size={18} className="text-[#a78bfa] shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0 text-xs">
+              <div className="font-semibold mb-0.5">Dual-source reconciliation</div>
+              <div className="text-muted">
+                Stores where lcbo.com shows the SKU live (in stock) but SOD shows it
+                blank, missing, or fully delisted. The killer signal — lcbo.com is
+                near-realtime; SOD has multi-day lag. Refreshes every 2h automatically.
+              </div>
+            </div>
+            <button
+              onClick={() => rescan.mutate()}
+              disabled={rescan.isPending}
+              className="shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[#a78bfa] text-white text-xs font-semibold disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={rescan.isPending ? 'animate-spin' : ''} />
+              {rescan.isPending ? 'Scanning…' : 'Rescan now'}
+            </button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{lcboLive.data?.total ?? 0} live discoveries</CardTitle>
+              <CardDescription>
+                Sorted newest first. Tap a store to drill in and create a deal.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {lcboLive.isLoading &&
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="skeleton h-20" />
+                  ))}
+                {lcboLive.data?.discoveries.length === 0 && !lcboLive.isLoading && (
+                  <div className="text-center py-12 text-muted text-sm">
+                    No discrepancies right now. SOD and lcbo.com are aligned.
+                  </div>
+                )}
+                {lcboLive.data?.discoveries.map((d, i) => (
+                  <Link
+                    key={i}
+                    href={`/stores/${d.store_number}`}
+                    className="block m-card"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                          <span
+                            className="change-chip"
+                            style={{
+                              background: 'rgba(167,139,250,0.18)',
+                              color: '#a78bfa',
+                            }}
+                          >
+                            <Radar size={11} className="inline mr-1" />
+                            LIVE on LCBO.COM
+                          </span>
+                          {d.current_sod_status === 'F' && (
+                            <span className="change-chip change-DELISTED">SOD: Fully Delisted</span>
+                          )}
+                          {!d.current_sod_status && (
+                            <span className="change-chip change-BASELINE">SOD: missing</span>
+                          )}
+                          <span
+                            className="change-chip"
+                            style={{
+                              background: d.territory_color + '33',
+                              color: d.territory_color,
+                            }}
+                          >
+                            {d.territory_name}
+                          </span>
+                        </div>
+                        <div className="font-semibold text-base">
+                          #{d.store_number} · {d.account ?? '—'}
+                        </div>
+                        <div className="text-xs text-muted">
+                          {d.brand} {d.product_name} · {d.city}{' '}
+                          {d.rep ? `· Rep: ${d.rep}` : ''}
+                        </div>
+                        {d.last_lcbo_seen && (
+                          <div className="text-[10px] text-muted mt-1">
+                            Last seen on lcbo.com: {formatDateTime(d.last_lcbo_seen)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs text-muted">{formatDate(d.change_date)}</div>
                       </div>
                     </div>
                   </Link>
