@@ -39,6 +39,8 @@ const NAV = [
   { href: '/manager', label: 'Manager', icon: Trophy },
   // Drawer-only (after the 5-tab bar):
   { href: '/nb', label: 'NB Distillers ★', icon: Trophy },
+  { href: '/anu-import', label: 'Anu Import', icon: Tag },
+  { href: '/route-planner', label: 'Route Planner', icon: Navigation },
   { href: '/log', label: 'Log Visit', icon: Plus },
   { href: '/follow-ups', label: 'Tasting Follow-ups', icon: AlertTriangle },
   { href: '/pipeline', label: 'Pipeline', icon: Target },

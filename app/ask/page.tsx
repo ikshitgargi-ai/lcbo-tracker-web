@@ -39,6 +39,10 @@ export default function AskPage() {
       setTurns((t) => [{ question: q, error: (err as Error).message }, ...t]),
   });
 
+  const aiNotConfigured = ask.error
+    ? String((ask.error as Error).message || '').includes('ANTHROPIC_API_KEY')
+    : false;
+
   function submit(q?: string) {
     const question = (q ?? input).trim();
     if (!question) return;
@@ -58,6 +62,37 @@ export default function AskPage() {
           summarize. Powered by Claude.
         </p>
       </header>
+
+      {aiNotConfigured && (
+        <div className="m-card flex items-start gap-3 border-[var(--color-warning)]/50 bg-[rgba(253,203,110,0.06)]">
+          <Sparkles size={18} className="text-[var(--color-warning)] shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 text-xs">
+            <div className="font-semibold text-[var(--color-foreground)] mb-1">
+              Claude API key not configured
+            </div>
+            <div className="text-muted">
+              The backend is missing <code>ANTHROPIC_API_KEY</code>. Set it on Render:
+            </div>
+            <ol className="list-decimal ml-4 mt-2 space-y-1 text-muted">
+              <li>Go to Render dashboard → lcbo-tracker service → Environment</li>
+              <li>Add new env var: <code>ANTHROPIC_API_KEY</code> = your key</li>
+              <li>Render will auto-redeploy in ~60s. Refresh and ask again.</li>
+            </ol>
+            <div className="text-muted mt-2">
+              Get a key at{' '}
+              <a
+                href="https://console.anthropic.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-accent)] underline"
+              >
+                console.anthropic.com
+              </a>
+              . ~$5/mo at expected volume.
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardContent className="pt-4">

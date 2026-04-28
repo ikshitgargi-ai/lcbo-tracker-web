@@ -280,6 +280,25 @@ export const api = {
 
   // ===== NB Distillers premium tracker =====
   nbTracker: () => request<NbTrackerPayload>('/api/crm/nb-tracker'),
+  anuImport: () => request<NbTrackerPayload>('/api/crm/anu-import'),
+
+  // ===== Route planner =====
+  cities: () => request<{ city: string; store_count: number }[]>('/api/crm/cities'),
+  routePlanner: (params: {
+    city?: string;
+    district?: string;
+    max_skus_listed?: number;
+    brand?: string;
+    max_stops?: number;
+    start_lat?: number;
+    start_lng?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v != null && v !== '') qs.set(k, String(v));
+    });
+    return request<RoutePlannerPayload>(`/api/crm/route-planner?${qs.toString()}`);
+  },
 
   // ===== Admin: rep roster =====
   roster: () => request<{ roster: string[]; placeholder_for_unassigned: string }>('/api/crm/admin/roster'),
@@ -1187,6 +1206,37 @@ export interface ManagerTerritoryRow {
   rep_name: string;
   store_count: number;
 }
+export interface RouteStop {
+  store_id: number;
+  store_number: number;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  priority: string;
+  rep: string;
+  lat: number;
+  lng: number;
+  manager_name: string;
+  manager_phone: string;
+  territory_id: number | null;
+  territory_name: string;
+  territory_color: string;
+  skus_listed: number;
+  leg_distance_km: number;
+}
+export interface RoutePlannerPayload {
+  city: string | null;
+  district: string | null;
+  brand_filter: string;
+  max_skus_listed: number;
+  total_stops: number;
+  total_distance_km: number;
+  total_candidates: number;
+  route: RouteStop[];
+  freshness?: Freshness;
+}
+
 export interface NbTrackerPayload {
   brand: string;
   tagline: string;
