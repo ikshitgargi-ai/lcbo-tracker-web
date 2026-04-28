@@ -1,40 +1,68 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Phone, MapPin, User, Loader2, CheckCircle2 } from 'lucide-react';
+import { Phone, MapPin, User, Loader2, CheckCircle2, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 
 /**
- * Store number input that resolves to full store details (name, address, phone,
- * manager) on debounced lookup. Used in the Quick-Log sheet so reps don't have
- * to memorize what "Store 444" is.
+ * Smart store autocomplete: rep can type EITHER a store number ("217") OR any
+ * fragment of the store name / address / city / postal code. Picks the matching
+ * store and autopopulates name + address + phone (tap-to-call) + manager.
+ *
+ * Backed by /api/crm/store-search (returns up to 10 matches).
  */
 export function StoreLookup({
   value,
   onChange,
   onResolved,
-  placeholder = 'e.g. 217',
+  placeholder = 'Store # or name/address',
 }: {
   value: string;
   onChange: (v: string) => void;
-  onResolved?: (store: { store_number: number; account: string; address: string; city: string; phone: string; manager_name: string } | null) => void;
+  onResolved?: (
+    store: {
+      store_number: number;
+      account: string;
+      address: string;
+      city: string;
+      phone: string;
+      manager_name: string;
+    } | null,
+  ) => void;
   placeholder?: string;
 }) {
   const [debounced, setDebounced] = useState('');
+  const [picked, setPicked] = useState<number | null>(null);
 
   useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), 250);
+    const id = setTimeout(() => setDebounced(value.trim()), 220);
     return () => clearTimeout(id);
   }, [value]);
 
-  const n = parseInt(debounced, 10);
-  const enabled = Number.isFinite(n) && n > 0;
+  const enabled = debounced.length >= 2;
+
+  // 1) Live search across number/name/address (typeahead)
+  const search = useQuery({
+    queryKey: ['store-search', debounced],
+    queryFn: () => api.storeSearch(debounced),
+    enabled,
+    retry: false,
+  });
+
+  const matches = useMemo(() => search.data?.matches ?? [], [search.data]);
+
+  // 2) Once exactly one match (or the user picked one) — fetch full profile to
+  //    surface manager phone / asst manager etc that the search row may not include.
+  const exactNumber = /^\d+$/.test(debounced) ? Number(debounced) : null;
+  const autoPick =
+    picked ??
+    (exactNumber ?? (matches.length === 1 ? matches[0].store_number : null));
 
   const lookup = useQuery({
-    queryKey: ['store-full', n],
-    queryFn: () => api.storeFull(n),
-    enabled,
+    queryKey: ['store-full', autoPick],
+    queryFn: () => api.storeFull(autoPick!),
+    enabled: !!autoPick,
     retry: false,
   });
 
@@ -43,8 +71,8 @@ export function StoreLookup({
       onResolved?.(null);
       return;
     }
-    if (lookup.data?.store) {
-      const s = lookup.data.store;
+    const s = lookup.data?.store;
+    if (s) {
       onResolved?.({
         store_number: s.store_number,
         account: s.account ?? '',
@@ -60,15 +88,48 @@ export function StoreLookup({
 
   return (
     <div>
-      <input
-        type="number"
-        inputMode="numeric"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="select"
-      />
-      {enabled && (
+      <div className="relative">
+        <Search
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] pointer-events-none"
+        />
+        <input
+          type="text"
+          inputMode="search"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setPicked(null); // reset selection when typing
+          }}
+          placeholder={placeholder}
+          className="select pl-9"
+          autoComplete="off"
+        />
+      </div>
+      {enabled && matches.length > 1 && !autoPick && (
+        <div className="mt-2 rounded-lg border border-[var(--color-card-border)] bg-[var(--color-background)] divide-y divide-[var(--color-card-border)] overflow-hidden">
+          {matches.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                setPicked(m.store_number);
+                onChange(String(m.store_number));
+              }}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-card)]"
+            >
+              <div className="font-semibold text-sm">
+                #{m.store_number} · {m.account || '—'}
+              </div>
+              <div className="text-muted">
+                {m.address}
+                {m.city ? `, ${m.city}` : ''}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {autoPick && (
         <div className="mt-2 p-2.5 rounded-lg bg-[var(--color-background)] border border-[var(--color-card-border)] text-xs">
           {lookup.isLoading && (
             <div className="flex items-center gap-2 text-muted">
@@ -76,7 +137,9 @@ export function StoreLookup({
             </div>
           )}
           {lookup.error && (
-            <div className="text-[var(--color-warning)]">Store #{n} not found in CRM.</div>
+            <div className="text-[var(--color-warning)]">
+              Store #{autoPick} not found in CRM.
+            </div>
           )}
           {lookup.data?.store && (
             <div className="space-y-1">
@@ -99,7 +162,9 @@ export function StoreLookup({
                 <div className="flex items-center gap-1.5 text-muted">
                   <Phone size={11} />
                   <a
-                    href={`tel:${(lookup.data.store.manager_phone || lookup.data.store.phone).replace(/[^0-9+]/g, '')}`}
+                    href={`tel:${(
+                      lookup.data.store.manager_phone || lookup.data.store.phone
+                    ).replace(/[^0-9+]/g, '')}`}
                     className="text-[var(--color-accent)]"
                   >
                     {lookup.data.store.manager_phone || lookup.data.store.phone}
@@ -114,6 +179,11 @@ export function StoreLookup({
               )}
             </div>
           )}
+        </div>
+      )}
+      {enabled && !search.isLoading && matches.length === 0 && (
+        <div className="mt-2 text-xs text-muted">
+          No stores matching &ldquo;{debounced}&rdquo;.
         </div>
       )}
     </div>

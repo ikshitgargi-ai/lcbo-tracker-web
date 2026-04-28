@@ -210,6 +210,8 @@ export const api = {
   // ===== Killer rep workflow: in-store replace targets =====
   storeFull: (storeNumber: number | string) =>
     request<StoreFullPayload>(`/api/crm/store/${storeNumber}/full`),
+  storeSearch: (q: string) =>
+    request<StoreSearchPayload>(`/api/crm/store-search?q=${encodeURIComponent(q)}`),
   replaceTargets: (storeNumber: number | string, perCat = 5) =>
     request<ReplaceTargetsPayload>(`/api/crm/store/${storeNumber}/replace-targets?per_cat=${perCat}`),
 
@@ -947,6 +949,25 @@ export interface StoreFullPayload {
     territory_color: string;
   };
   snapshot_date: string | null;
+}
+
+export interface StoreSearchMatch {
+  id: number;
+  store_number: number;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  phone: string;
+  manager_phone: string;
+  manager_name: string;
+  rep: string;
+  lat: number;
+  lng: number;
+}
+export interface StoreSearchPayload {
+  matches: StoreSearchMatch[];
+  query: string;
 }
 
 export interface ReplaceTarget {
