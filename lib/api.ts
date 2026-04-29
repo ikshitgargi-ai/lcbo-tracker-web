@@ -212,6 +212,31 @@ export const api = {
     request<StoreFullPayload>(`/api/crm/store/${storeNumber}/full`),
   storeSearch: (q: string) =>
     request<StoreSearchPayload>(`/api/crm/store-search?q=${encodeURIComponent(q)}`),
+
+  // ===== Tasting bookings =====
+  bookTasting: (body: {
+    store_number: number;
+    rep: string;
+    scheduled_date: string;
+    sku?: string;
+    notes?: string;
+    expected_units?: number;
+  }) =>
+    request<{ status: 'booked' | 'exists'; deal_id: number; scheduled_date: string; rep: string }>(
+      '/api/crm/tasting-booking',
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  upcomingTastings: (params: { days?: number; rep?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.days != null) qs.set('days', String(params.days));
+    if (params.rep) qs.set('rep', params.rep);
+    const s = qs.toString();
+    return request<UpcomingTastingsPayload>(
+      `/api/crm/tastings/upcoming${s ? `?${s}` : ''}`,
+    );
+  },
+  calendarIcsUrl: (rep: string, days = 60) =>
+    `${API_BASE}/api/crm/calendar/${encodeURIComponent(rep)}.ics?days=${days}`,
   replaceTargets: (storeNumber: number | string, perCat = 5) =>
     request<ReplaceTargetsPayload>(`/api/crm/store/${storeNumber}/replace-targets?per_cat=${perCat}`),
 
@@ -964,10 +989,39 @@ export interface StoreSearchMatch {
   rep: string;
   lat: number;
   lng: number;
+  last_activity_at?: string | null;
+  last_activity_type?: string | null;
+  last_activity_rep?: string;
+  last_activity_notes?: string;
 }
 export interface StoreSearchPayload {
   matches: StoreSearchMatch[];
   query: string;
+}
+
+export interface TastingBooking {
+  deal_id: number;
+  store_number: number;
+  sku: string;
+  scheduled_date: string;
+  expected_units: number;
+  rep: string;
+  notes: string;
+  booked_at: string | null;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  manager_name: string;
+  phone: string;
+  territory_name: string;
+  territory_color: string;
+}
+export interface UpcomingTastingsPayload {
+  window: { from: string; to: string; days: number };
+  rep: string;
+  count: number;
+  bookings: TastingBooking[];
 }
 
 export interface ReplaceTarget {

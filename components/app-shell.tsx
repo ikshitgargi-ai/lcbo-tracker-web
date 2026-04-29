@@ -42,6 +42,7 @@ const NAV = [
   { href: '/anu-import', label: 'Anu Import', icon: Tag },
   { href: '/route-planner', label: 'Route Planner', icon: Navigation },
   { href: '/log', label: 'Log Visit', icon: Plus },
+  { href: '/tastings', label: 'Tastings (Book + Calendar)', icon: Calendar },
   { href: '/follow-ups', label: 'Tasting Follow-ups', icon: AlertTriangle },
   { href: '/pipeline', label: 'Pipeline', icon: Target },
   { href: '/nearby', label: 'Nearby (GPS)', icon: Navigation },

@@ -108,25 +108,48 @@ export function StoreLookup({
       </div>
       {enabled && matches.length > 1 && !autoPick && (
         <div className="mt-2 rounded-lg border border-[var(--color-card-border)] bg-[var(--color-background)] divide-y divide-[var(--color-card-border)] overflow-hidden">
-          {matches.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => {
-                setPicked(m.store_number);
-                onChange(String(m.store_number));
-              }}
-              className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-card)]"
-            >
-              <div className="font-semibold text-sm">
-                #{m.store_number} · {m.account || '—'}
-              </div>
-              <div className="text-muted">
-                {m.address}
-                {m.city ? `, ${m.city}` : ''}
-              </div>
-            </button>
-          ))}
+          {matches.map((m) => {
+            const last = m.last_activity_at ? new Date(m.last_activity_at) : null;
+            const lastDays =
+              last && !isNaN(last.getTime())
+                ? Math.floor((Date.now() - last.getTime()) / (1000 * 60 * 60 * 24))
+                : null;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  setPicked(m.store_number);
+                  onChange(String(m.store_number));
+                }}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--color-card)]"
+              >
+                <div className="font-semibold text-sm flex items-center gap-2">
+                  #{m.store_number} · {m.account || '—'}
+                  {m.rep && (
+                    <span className="text-[10px] text-muted font-normal">{m.rep}</span>
+                  )}
+                </div>
+                <div className="text-muted">
+                  {m.address}
+                  {m.city ? `, ${m.city}` : ''}
+                  {m.postal ? ` ${m.postal}` : ''}
+                </div>
+                {last && (
+                  <div className="text-[10px] text-muted mt-0.5">
+                    Last: {m.last_activity_type ?? 'visit'}
+                    {m.last_activity_rep ? ` by ${m.last_activity_rep}` : ''}
+                    {lastDays != null
+                      ? ` · ${lastDays === 0 ? 'today' : `${lastDays}d ago`}`
+                      : ''}
+                    {m.last_activity_notes
+                      ? ` — ${m.last_activity_notes.slice(0, 80)}${m.last_activity_notes.length > 80 ? '…' : ''}`
+                      : ''}
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
       {autoPick && (
