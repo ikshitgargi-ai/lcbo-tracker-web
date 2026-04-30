@@ -212,6 +212,15 @@ export const api = {
     request<StoreFullPayload>(`/api/crm/store/${storeNumber}/full`),
   storeSearch: (q: string) =>
     request<StoreSearchPayload>(`/api/crm/store-search?q=${encodeURIComponent(q)}`),
+  storesFinder: (params: { city?: string; rep?: string; territory_id?: number; priority?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.city) qs.set('city', params.city);
+    if (params.rep) qs.set('rep', params.rep);
+    if (params.territory_id != null) qs.set('territory_id', String(params.territory_id));
+    if (params.priority) qs.set('priority', params.priority);
+    const s = qs.toString();
+    return request<StoresFinderPayload>(`/api/crm/stores-finder${s ? `?${s}` : ''}`);
+  },
 
   // ===== Tasting bookings =====
   bookTasting: (body: {
@@ -997,6 +1006,40 @@ export interface StoreSearchMatch {
 export interface StoreSearchPayload {
   matches: StoreSearchMatch[];
   query: string;
+}
+
+export interface FinderStore {
+  id: number;
+  store_number: number;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  phone: string;
+  manager_phone: string;
+  manager_name: string;
+  asst_manager_name: string;
+  store_email: string;
+  rep: string;
+  priority: string;
+  territory_id: number | null;
+  territory_name: string;
+  territory_color: string;
+  lat: number;
+  lng: number;
+  last_activity_at: string | null;
+  last_activity_type: string | null;
+  last_activity_rep: string;
+  last_activity_notes: string;
+  total_activities: number;
+  total_deals: number;
+  open_deals: number;
+}
+export interface StoresFinderPayload {
+  count: number;
+  stores: FinderStore[];
+  filters: { city: string | null; rep: string | null; territory_id: number | null; priority: string | null };
+  freshness: Freshness;
 }
 
 export interface TastingBooking {

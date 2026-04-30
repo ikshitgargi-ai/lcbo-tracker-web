@@ -38,6 +38,7 @@ const NAV = [
   { href: '/#today', label: 'Today', icon: Calendar, anchor: 'today' },
   { href: '/manager', label: 'Manager', icon: Trophy },
   // Drawer-only (after the 5-tab bar):
+  { href: '/finder', label: 'Store Finder', icon: MapPin },
   { href: '/nb', label: 'NB Distillers ★', icon: Trophy },
   { href: '/anu-import', label: 'Anu Import', icon: Tag },
   { href: '/route-planner', label: 'Route Planner', icon: Navigation },
