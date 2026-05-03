@@ -171,13 +171,8 @@ export default function StorePage({
                 </a>
               </div>
 
-              {/* Manager contact */}
-              {(s.manager_name || s.manager_phone) && (
-                <div className="text-xs text-muted pt-2 border-t border-[var(--color-card-border)]">
-                  {s.manager_name && <span>Manager: {s.manager_name} · </span>}
-                  {s.manager_phone && <span>{s.manager_phone}</span>}
-                </div>
-              )}
+              {/* Inline-editable contact card — reps populate this during visits */}
+              <ContactCard storeId={s.id} initial={s} onSaved={() => full.refetch()} />
             </div>
           )}
         </CardContent>
@@ -414,6 +409,170 @@ export default function StorePage({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ContactCard({
+  storeId,
+  initial,
+  onSaved,
+}: {
+  storeId: number;
+  initial: {
+    manager_name?: string;
+    manager_phone?: string;
+    asst_manager_name?: string;
+    store_email?: string;
+    phone?: string;
+    rep?: string;
+    priority?: string;
+  };
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    manager_name: initial.manager_name ?? '',
+    manager_phone: initial.manager_phone ?? '',
+    asst_manager_name: initial.asst_manager_name ?? '',
+    store_email: initial.store_email ?? '',
+    phone: initial.phone ?? '',
+    rep: initial.rep ?? '',
+    priority: initial.priority ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.updateStore(storeId, form);
+      toast.success('Contact info saved');
+      setEditing(false);
+      onSaved();
+    } catch (e) {
+      toast.error('Save failed', { description: (e as Error).message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    const hasAny =
+      form.manager_name ||
+      form.manager_phone ||
+      form.asst_manager_name ||
+      form.store_email ||
+      form.phone ||
+      form.rep ||
+      form.priority;
+    return (
+      <div className="text-xs pt-2 border-t border-[var(--color-card-border)] flex items-start gap-2">
+        <div className="flex-1 min-w-0 space-y-0.5 text-muted">
+          {form.manager_name && (
+            <div>
+              Manager: <span className="text-[var(--color-foreground)]">{form.manager_name}</span>
+              {form.manager_phone && <span> · {form.manager_phone}</span>}
+            </div>
+          )}
+          {form.asst_manager_name && <div>Asst: {form.asst_manager_name}</div>}
+          {form.phone && !form.manager_phone && <div>Phone: {form.phone}</div>}
+          {form.store_email && <div>Email: {form.store_email}</div>}
+          {form.rep && <div>Rep: {form.rep}</div>}
+          {!hasAny && (
+            <div className="italic text-[var(--color-warning)]">
+              No contact info on file — tap Edit to add manager / phone / email
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="text-[var(--color-accent)] underline shrink-0"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-xs pt-2 border-t border-[var(--color-card-border)] space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="text"
+          placeholder="Manager name"
+          value={form.manager_name}
+          onChange={(e) => setForm({ ...form, manager_name: e.target.value })}
+          className="select"
+        />
+        <input
+          type="tel"
+          placeholder="Manager phone"
+          value={form.manager_phone}
+          onChange={(e) => setForm({ ...form, manager_phone: e.target.value })}
+          className="select"
+        />
+        <input
+          type="text"
+          placeholder="Asst. manager name"
+          value={form.asst_manager_name}
+          onChange={(e) => setForm({ ...form, asst_manager_name: e.target.value })}
+          className="select"
+        />
+        <input
+          type="tel"
+          placeholder="Store phone"
+          value={form.phone}
+          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          className="select"
+        />
+        <input
+          type="email"
+          placeholder="Store email"
+          value={form.store_email}
+          onChange={(e) => setForm({ ...form, store_email: e.target.value })}
+          className="select col-span-2"
+        />
+        <select
+          value={form.rep}
+          onChange={(e) => setForm({ ...form, rep: e.target.value })}
+          className="select"
+        >
+          <option value="">— Rep —</option>
+          {['Ikshit', 'Virat', 'Neeraj', 'Namit'].map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.priority}
+          onChange={(e) => setForm({ ...form, priority: e.target.value })}
+          className="select"
+        >
+          <option value="">— Priority —</option>
+          <option value="A">A — Top</option>
+          <option value="B">B — Strong</option>
+          <option value="C">C — Standard</option>
+        </select>
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="flex-1 bg-[var(--color-accent)] text-[#2a1f0f] rounded-lg py-2 font-semibold text-sm disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          className="px-4 rounded-lg bg-[var(--color-card)] border border-[var(--color-card-border)] text-sm"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

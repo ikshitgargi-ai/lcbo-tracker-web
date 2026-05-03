@@ -212,6 +212,19 @@ export const api = {
     request<StoreFullPayload>(`/api/crm/store/${storeNumber}/full`),
   storeSearch: (q: string) =>
     request<StoreSearchPayload>(`/api/crm/store-search?q=${encodeURIComponent(q)}`),
+  // Update editable store fields (manager name, phone, email, rep, priority).
+  // Reps fill these in during visits so the directory grows over time.
+  updateStore: (storeId: number, fields: Partial<{
+    account: string; address: string; city: string; postal: string;
+    phone: string; email: string; rep: string; priority: string;
+    manager_name: string; asst_manager_name: string;
+    manager_phone: string; store_email: string; contacts: string; producer: string;
+  }>) =>
+    request<{ success: boolean }>(`/api/stores/${storeId}`, {
+      method: 'PUT',
+      body: JSON.stringify(fields),
+    }),
+
   storesFinder: (params: { city?: string; rep?: string; territory_id?: number; priority?: string } = {}) => {
     const qs = new URLSearchParams();
     if (params.city) qs.set('city', params.city);
