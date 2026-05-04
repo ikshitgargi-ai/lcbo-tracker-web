@@ -846,7 +846,7 @@ function QuickLogSheet({
         className="w-full max-w-lg bg-[var(--color-card)] rounded-t-2xl border-t border-x border-[var(--color-card-border)] p-5 pb-8 max-h-[85vh] overflow-y-auto safe-bottom"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <h2>Quick Log</h2>
           <button
             onClick={onClose}
@@ -857,16 +857,25 @@ function QuickLogSheet({
           </button>
         </div>
 
-        {/* Rep selector — REP SELF-SELECTS, no auto-assign */}
-        <div className="mb-4 p-3 rounded-lg bg-[var(--color-background)] border border-[var(--color-card-border)]">
-          <label className="text-[10px] uppercase tracking-wider text-muted font-semibold block mb-1.5">
-            Logging as
+        {/* REP SELECTOR — first thing rep sees. Self-select, persists in
+            localStorage so they don't re-pick every time. */}
+        <div
+          className="mb-4 p-4 rounded-xl"
+          style={{
+            background: rep ? 'rgba(34,197,94,0.08)' : 'rgba(245,158,11,0.12)',
+            border: `2px solid ${rep ? 'rgba(34,197,94,0.4)' : 'rgba(245,158,11,0.5)'}`,
+          }}
+        >
+          <label className="text-xs uppercase tracking-wider font-bold block mb-2"
+                 style={{ color: rep ? 'var(--color-success)' : 'var(--color-warning)' }}>
+            👤 Logging as {rep ? `→ ${rep}` : '(PICK YOUR NAME)'}
           </label>
           <select
             value={rep}
             onChange={(e) => handleRepChange(e.target.value)}
-            className="select w-full"
+            className="select w-full text-base"
             autoFocus={!rep}
+            style={{ minHeight: 48 }}
           >
             <option value="">— pick your name —</option>
             {REP_ROSTER.map((r) => (
@@ -876,8 +885,13 @@ function QuickLogSheet({
             ))}
           </select>
           {!rep && (
-            <div className="text-xs text-[var(--color-warning)] mt-1.5">
-              ⚠️ Pick your name to log activity. Saved for next time.
+            <div className="text-xs mt-2" style={{ color: 'var(--color-warning)' }}>
+              ⚠️ Pick your name above to enable logging. Saved for next time.
+            </div>
+          )}
+          {rep && (
+            <div className="text-xs mt-1.5 text-muted">
+              Activity will log under <strong>{rep}</strong>. Tap dropdown to change.
             </div>
           )}
         </div>
