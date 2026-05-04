@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
@@ -12,6 +12,7 @@ import {
   User,
   Calendar,
   Filter,
+  AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useActiveRep } from '@/lib/active-rep';
@@ -31,7 +32,30 @@ export default function RoutePlannerPage() {
   const [maxStops, setMaxStops] = useState(8);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [coordsError, setCoordsError] = useState('');
+  const [permState, setPermState] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
+  const [gpsLoading, setGpsLoading] = useState(false);
   const [activeRep] = useActiveRep();
+
+  // On mount, learn the current geolocation permission state so we can show
+  // the right CTA (auto-prompt vs. show iOS-instructions banner).
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      setPermState('denied');
+      setCoordsError('Geolocation not supported on this device');
+      return;
+    }
+    if ('permissions' in navigator) {
+      (navigator.permissions as Permissions)
+        .query({ name: 'geolocation' as PermissionName })
+        .then((p) => {
+          setPermState(p.state as typeof permState);
+          p.onchange = () => setPermState(p.state as typeof permState);
+        })
+        .catch(() => setPermState('prompt'));
+    } else {
+      setPermState('prompt');
+    }
+  }, []);
 
   const cities = useQuery({ queryKey: ['cities'], queryFn: api.cities });
   const territories = useQuery({ queryKey: ['territories'], queryFn: api.crmTerritories });
@@ -53,16 +77,44 @@ export default function RoutePlannerPage() {
 
   function getGPS() {
     if (!('geolocation' in navigator)) {
-      setCoordsError('Geolocation not supported');
+      setCoordsError('Geolocation not supported on this device');
+      setPermState('denied');
       return;
     }
     setCoordsError('');
+    setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => setCoordsError(err.message),
-      { enableHighAccuracy: true, timeout: 10000 },
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setPermState('granted');
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsLoading(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setPermState('denied');
+          setCoordsError('Location blocked. Tap the address-bar icon (or iOS Settings → Safari → Location) to allow.');
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setCoordsError('GPS unavailable — try moving to a window or stepping outside.');
+        } else if (err.code === err.TIMEOUT) {
+          setCoordsError('GPS timed out — tap "Use my location" again.');
+        } else {
+          setCoordsError(err.message);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
   }
+
+  // Auto-prompt for GPS the moment the rep picks a city/territory IF we
+  // haven't asked yet. The browser will show its native permission popup —
+  // this is what makes the feature actually work on phones.
+  useEffect(() => {
+    if ((city || district) && !coords && !gpsLoading && permState === 'prompt') {
+      getGPS();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city, district, permState]);
 
   function multiStopGoogleMapsUrl(): string | null {
     if (!route.data?.route || route.data.route.length === 0) return null;
@@ -174,18 +226,54 @@ export default function RoutePlannerPage() {
               </select>
             </Field>
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={getGPS}>
-              <MapPin size={14} />
-              {coords ? 'Re-pin location' : 'Use my location'}
-            </Button>
-            {coords && (
-              <span className="text-xs text-muted font-mono">
-                {coords.lat.toFixed(3)}, {coords.lng.toFixed(3)}
-              </span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" variant="secondary" onClick={getGPS} disabled={gpsLoading}>
+                {gpsLoading ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+                {coords ? 'Re-pin location' : gpsLoading ? 'Locating…' : 'Use my location'}
+              </Button>
+              {coords && (
+                <span className="inline-flex items-center gap-1 text-xs text-[var(--color-success)] font-mono">
+                  ● GPS locked · {coords.lat.toFixed(3)}, {coords.lng.toFixed(3)}
+                </span>
+              )}
+            </div>
+
+            {/* No-coords yet, permission still pending — explain what's about to pop */}
+            {!coords && permState === 'prompt' && (city || district) && !gpsLoading && (
+              <div className="flex items-start gap-2 text-xs p-2 rounded bg-[rgba(212,165,116,0.08)] border border-[rgba(212,165,116,0.3)]">
+                <MapPin size={14} className="text-[var(--color-accent)] shrink-0 mt-0.5" />
+                <span>
+                  Tap <b>Allow</b> when your phone asks for location — the route is built from where you are.
+                </span>
+              </div>
             )}
-            {coordsError && (
-              <span className="text-xs text-[var(--color-warning)]">{coordsError}</span>
+
+            {/* Permission denied — show recovery instructions, this is the critical UX */}
+            {permState === 'denied' && (
+              <div className="flex items-start gap-2 text-xs p-3 rounded bg-[rgba(255,107,107,0.08)] border border-[rgba(255,107,107,0.4)]">
+                <AlertTriangle size={14} className="text-[var(--color-danger)] shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-semibold text-[var(--color-foreground)]">
+                    Location is blocked — route won&apos;t start from your position
+                  </div>
+                  <div className="text-muted">
+                    On <b>iPhone Safari</b>: Settings → Safari → Location → Allow.
+                    On <b>Chrome</b>: tap the lock icon in the address bar → Permissions → Location → Allow.
+                    Then reload this page.
+                  </div>
+                  <button
+                    onClick={getGPS}
+                    className="text-[var(--color-accent)] underline mt-1"
+                  >
+                    Try again
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {coordsError && permState !== 'denied' && (
+              <div className="text-xs text-[var(--color-warning)]">{coordsError}</div>
             )}
           </div>
         </CardContent>

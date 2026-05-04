@@ -26,10 +26,22 @@ export default function NearbyPage() {
         .then((res: PermissionStatus) => {
           setPermissionState(res.state as typeof permissionState);
           res.onchange = () => setPermissionState(res.state as typeof permissionState);
+          // If we already have permission, auto-fire the location request
+          // so the rep sees nearby stores instantly without an extra tap.
+          if (res.state === 'granted') getGPS();
         })
         .catch(() => {});
     }
   }, []);
+
+  // Auto-prompt on landing if permission state is "prompt" — this triggers
+  // the native iOS/Android popup without requiring the rep to tap first.
+  useEffect(() => {
+    if (permissionState === 'prompt' && !coords && !gettingLocation && !manualCity) {
+      getGPS();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissionState]);
 
   const cities = useQuery({ queryKey: ['cities'], queryFn: api.cities });
   const cityChosen = cities.data?.find((c) => c.city === manualCity);
