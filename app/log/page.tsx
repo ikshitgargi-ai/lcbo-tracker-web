@@ -20,6 +20,7 @@ import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { StoreLookup } from '@/components/store-lookup';
 
 const ACTIVITY_TYPES = [
   { key: 'store_visit', label: 'Store Visit', icon: Eye },
@@ -152,14 +153,14 @@ function LogPageInner() {
             </select>
           </div>
           <div>
-            <Label>Store number</Label>
-            <input
-              type="number"
-              inputMode="numeric"
+            <Label>Store</Label>
+            <StoreLookup
               value={storeNumber}
-              onChange={(e) => setStoreNumber(e.target.value)}
-              placeholder="e.g. 217"
-              className="select"
+              onChange={setStoreNumber}
+              placeholder="Type store # OR name OR address OR postal…"
+              onResolved={(s) => {
+                if (s) setStoreNumber(String(s.store_number));
+              }}
             />
           </div>
         </CardContent>
