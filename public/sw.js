@@ -3,7 +3,7 @@
 //
 // On upgrade: bump VERSION to invalidate ALL old caches and force fresh HTML.
 
-const VERSION = 'anu-lcbo-v3-rep-and-search-fix';
+const VERSION = 'anu-lcbo-v4';
 
 self.addEventListener('install', (e) => {
   // Take over immediately — don't wait for old tabs to close
@@ -30,8 +30,12 @@ self.addEventListener('fetch', (e) => {
   // Never intercept backend mutations or refresh endpoints
   if (url.pathname.startsWith('/api/sod/sync') || url.pathname.includes('/refresh-')) return;
 
-  // API GETs: stale-while-revalidate (snappy + fresh in background)
-  if (url.pathname.startsWith('/api/')) {
+  // Same-origin API GETs only — never intercept cross-origin (e.g. Render
+  // backend at lcbo-tracker.onrender.com). Cross-origin fetches must hit
+  // the network so the frontend's real fetch error handling fires;
+  // intercepting them and returning a fake JSON 503 caused pages to render
+  // {offline:true} as if it were real data.
+  if (url.pathname.startsWith('/api/') && url.origin === self.location.origin) {
     e.respondWith(
       caches.open(VERSION).then(async (cache) => {
         const cached = await cache.match(req);
@@ -40,14 +44,7 @@ self.addEventListener('fetch', (e) => {
             if (r.ok) cache.put(req, r.clone());
             return r;
           })
-          .catch(
-            () =>
-              cached ??
-              new Response('{"offline":true}', {
-                headers: { 'Content-Type': 'application/json' },
-                status: 503,
-              }),
-          );
+          .catch(() => cached);  // No fake-200 fallback; let fetch reject if no cache.
         return cached ?? network;
       }),
     );
