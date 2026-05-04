@@ -539,7 +539,7 @@ function ContactCard({
           className="select"
         >
           <option value="">— Rep —</option>
-          {['Ikshit', 'Virat', 'Namit', 'Surya'].map((r) => (
+          {['Ikshit', 'Virat', 'Namit', 'Surya', 'Neeraj'].map((r) => (
             <option key={r} value={r}>
               {r}
             </option>

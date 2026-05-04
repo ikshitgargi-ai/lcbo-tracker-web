@@ -6,7 +6,7 @@ import { Trophy, TrendingUp, Calendar, MapPin } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
-const REPS = ['Ikshit', 'Virat', 'Namit', 'Surya'];
+const REPS = ['Ikshit', 'Virat', 'Namit', 'Surya', 'Neeraj'];
 
 export default function RepPerformancePage() {
   const [days, setDays] = useState(30);

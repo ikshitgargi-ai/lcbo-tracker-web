@@ -473,7 +473,7 @@ function TerritoriesTab({
   const [draftRep, setDraftRep] = useState('');
 
   const roster = useQuery({ queryKey: ['roster'], queryFn: api.roster });
-  const officialRoster = roster.data?.roster ?? ['Ikshit', 'Virat', 'Namit', 'Surya'];
+  const officialRoster = roster.data?.roster ?? ['Ikshit', 'Virat', 'Namit', 'Surya', 'Neeraj'];
 
   // Picker shows the official roster + any rep currently in stores
   const allRepNames = Array.from(new Set([

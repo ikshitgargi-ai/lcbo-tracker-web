@@ -142,9 +142,11 @@ function LogPageInner() {
               className="select"
             >
               <option value="">— pick rep —</option>
-              {reps.data?.map((r) => (
-                <option key={r.rep} value={r.rep}>
-                  {r.rep}
+              {/* Hardcoded official roster — was reading reps table which only
+                  contains reps who already logged activity (chicken-and-egg). */}
+              {['Ikshit', 'Virat', 'Namit', 'Surya', 'Neeraj'].map((r) => (
+                <option key={r} value={r}>
+                  {r}
                 </option>
               ))}
             </select>
