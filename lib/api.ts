@@ -225,6 +225,21 @@ export const api = {
       body: JSON.stringify(fields),
     }),
 
+  // Per-rep performance scoreboard
+  repPerformance: (days = 30) =>
+    request<RepPerformancePayload>(`/api/crm/rep-performance?days=${days}`),
+  // Daily activity log (manager visibility)
+  dailyLog: (params: { date?: string; days?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.date) qs.set('date', params.date);
+    if (params.days != null) qs.set('days', String(params.days));
+    const s = qs.toString();
+    return request<DailyLogPayload>(`/api/crm/daily-log${s ? `?${s}` : ''}`);
+  },
+  // 14-day territory plan per rep (Namit/Surya)
+  territoryPlan: (rep: string, days = 14, max_per_day = 9) =>
+    request<TerritoryPlanPayload>(`/api/crm/territory-plan?rep=${encodeURIComponent(rep)}&days=${days}&max_per_day=${max_per_day}`),
+
   storesFinder: (params: { city?: string; rep?: string; territory_id?: number; priority?: string } = {}) => {
     const qs = new URLSearchParams();
     if (params.city) qs.set('city', params.city);
@@ -1053,6 +1068,93 @@ export interface StoresFinderPayload {
   stores: FinderStore[];
   filters: { city: string | null; rep: string | null; territory_id: number | null; priority: string | null };
   freshness: Freshness;
+}
+
+export interface RepPerformanceRow {
+  rep: string;
+  activities_total: number;
+  activities_by_type: Record<string, number>;
+  stores_covered: number;
+  days_active: number;
+  deals_open: number;
+  deals_listed: number;
+  deals_lost: number;
+  listings_won_in_window: number;
+  last_activity_at: string | null;
+  last_activity_store: number | null;
+  last_activity_type: string | null;
+  tasting_to_listing_rate_pct: number | null;
+}
+export interface RepPerformancePayload {
+  window_days: number;
+  since: string;
+  reps: RepPerformanceRow[];
+  totals: {
+    activities: number;
+    stores_covered: number;
+    listings_won: number;
+    open_deals: number;
+  };
+}
+
+export interface DailyLogActivity {
+  id: number;
+  created_at: string | null;
+  visit_date: string | null;
+  rep: string;
+  activity_type: string;
+  notes: string;
+  outcome: string;
+  duration_minutes: number;
+  rating: number;
+  store_number: number | null;
+  account: string;
+  city: string;
+  address: string;
+  territory_name: string;
+  territory_color: string;
+}
+export interface DailyLogPayload {
+  window: { start: string; end: string; days: number };
+  count: number;
+  activities: DailyLogActivity[];
+  by_rep: Array<{ rep: string; count: number; by_type: Record<string, number>; stores_visited: number }>;
+}
+
+export interface TerritoryPlanStore {
+  id: number;
+  store_number: number;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  priority: string;
+  lat: number;
+  lng: number;
+  manager_name: string;
+  phone: string;
+  rep_assigned: string;
+  territory_name: string;
+  territory_color: string;
+  last_visit_at: string | null;
+  leg_km?: number | null;
+}
+export interface TerritoryPlanDay {
+  day: number;
+  date: string;
+  stops: number;
+  total_km_est: number;
+  cluster_label: string;
+  stores: TerritoryPlanStore[];
+}
+export interface TerritoryPlanPayload {
+  rep: string;
+  territory_name: string;
+  days_in_plan: number;
+  total_stores_in_territory: number;
+  stores_in_plan: number;
+  max_per_day: number;
+  plan: TerritoryPlanDay[];
 }
 
 export interface TastingBooking {

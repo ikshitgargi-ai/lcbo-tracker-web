@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { StoreLookup } from '@/components/store-lookup';
 import { useActiveRep } from '@/lib/active-rep';
 
-const REPS = ['Ikshit', 'Virat', 'Neeraj', 'Namit'];
+const REPS = ['Ikshit', 'Virat', 'Namit', 'Surya'];
 
 const TRACKED_SKUS = [
   { sku: '0020187', label: 'Red Admiral Vodka' },
