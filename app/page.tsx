@@ -774,6 +774,9 @@ function ActionTile({
   );
 }
 
+// Hardcoded official roster — used in the Quick-Log sheet and other selectors
+const REP_ROSTER = ['Ikshit', 'Virat', 'Namit', 'Surya', 'Neeraj'];
+
 function QuickLogSheet({
   trackedSkus,
   activeRep,
@@ -785,6 +788,8 @@ function QuickLogSheet({
   onClose: () => void;
   onLogged: () => void;
 }) {
+  const [, setActiveRep] = useActiveRep();
+  const [rep, setLocalRep] = useState<string>(activeRep ?? '');
   const [mode, setMode] = useState<'visit' | 'listing'>('visit');
   const [storeNumber, setStoreNumber] = useState('');
   const [sku, setSku] = useState(trackedSkus[0]?.sku ?? '');
@@ -792,6 +797,11 @@ function QuickLogSheet({
   const [activityType, setActivityType] = useState<'store_visit' | 'tasting' | 'sample_drop' | 'call' | 'email'>('store_visit');
   const [notes, setNotes] = useState('');
   const [visitDate, setVisitDate] = useState(new Date().toISOString().slice(0, 10));
+
+  const handleRepChange = (next: string) => {
+    setLocalRep(next);
+    setActiveRep(next || null);  // also persist to localStorage so other pages know
+  };
 
   const logListing = useMutation({
     mutationFn: () =>
@@ -809,16 +819,19 @@ function QuickLogSheet({
   });
 
   const logVisit = useMutation({
-    mutationFn: () =>
-      api.logActivity({
-        rep: activeRep ?? '',
+    mutationFn: () => {
+      if (!rep) throw new Error('Pick your name first');
+      if (!storeNumber) throw new Error('Pick a store first');
+      return api.logActivity({
+        rep,
         store_number: parseInt(storeNumber, 10),
         activity_type: activityType,
         notes,
         visit_date: visitDate,
-      }),
+      });
+    },
     onSuccess: () => {
-      toast.success('Activity logged');
+      toast.success(`Activity logged as ${rep}`);
       onLogged();
       onClose();
     },
@@ -842,6 +855,31 @@ function QuickLogSheet({
           >
             <X size={18} />
           </button>
+        </div>
+
+        {/* Rep selector — REP SELF-SELECTS, no auto-assign */}
+        <div className="mb-4 p-3 rounded-lg bg-[var(--color-background)] border border-[var(--color-card-border)]">
+          <label className="text-[10px] uppercase tracking-wider text-muted font-semibold block mb-1.5">
+            Logging as
+          </label>
+          <select
+            value={rep}
+            onChange={(e) => handleRepChange(e.target.value)}
+            className="select w-full"
+            autoFocus={!rep}
+          >
+            <option value="">— pick your name —</option>
+            {REP_ROSTER.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+          {!rep && (
+            <div className="text-xs text-[var(--color-warning)] mt-1.5">
+              ⚠️ Pick your name to log activity. Saved for next time.
+            </div>
+          )}
         </div>
 
         {/* Mode toggle */}
@@ -945,7 +983,7 @@ function QuickLogSheet({
             onClick={submit}
             disabled={
               !storeNumber ||
-              (mode === 'visit' && !activeRep) ||
+              (mode === 'visit' && !rep) ||
               logListing.isPending ||
               logVisit.isPending
             }
@@ -953,9 +991,13 @@ function QuickLogSheet({
           >
             {logListing.isPending || logVisit.isPending
               ? 'Saving…'
-              : mode === 'listing'
-                ? 'Mark as Listed'
-                : 'Save Activity'}
+              : !rep && mode === 'visit'
+                ? 'Pick your name first'
+                : !storeNumber
+                  ? 'Pick a store first'
+                  : mode === 'listing'
+                    ? 'Mark as Listed'
+                    : `Save Activity (as ${rep})`}
           </Button>
         </div>
       </div>

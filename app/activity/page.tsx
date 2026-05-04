@@ -11,7 +11,6 @@ import { relativeTime } from '@/lib/utils';
 
 export default function ActivityFeedPage() {
   const [activeRep] = useActiveRep();
-  const reps = useQuery({ queryKey: ['reps'], queryFn: api.reps });
   const [scope, setScope] = useState<'me' | 'team'>('team');
   const [days, setDays] = useState(14);
 

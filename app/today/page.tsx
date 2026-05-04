@@ -9,9 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { formatNumber, formatDate } from '@/lib/utils';
 import { FreshnessBanner } from '@/components/freshness-banner';
 
+// Hardcoded official roster — was reading api.reps which omits reps without
+// prior activity. Reps self-select; activeRep persists in localStorage.
+const REP_ROSTER = ['Ikshit', 'Virat', 'Namit', 'Surya', 'Neeraj'];
+
 export default function TodayPage() {
   const [rep, setRep] = useActiveRep();
-  const reps = useQuery({ queryKey: ['reps'], queryFn: api.reps });
 
   const plan = useQuery({
     queryKey: ['today', rep],
@@ -52,10 +55,10 @@ export default function TodayPage() {
               onChange={(e) => setRep(e.target.value || null)}
               className="select max-w-[260px]"
             >
-              <option value="">— pick a rep —</option>
-              {reps.data?.map((r) => (
-                <option key={r.rep} value={r.rep}>
-                  {r.rep} ({r.store_count} stores)
+              <option value="">— pick your name —</option>
+              {REP_ROSTER.map((r) => (
+                <option key={r} value={r}>
+                  {r}
                 </option>
               ))}
             </select>
