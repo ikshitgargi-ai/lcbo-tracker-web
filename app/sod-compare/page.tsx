@@ -3,9 +3,22 @@
 import { useState, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
-import { GitCompare, Upload, FileArchive, AlertTriangle, RefreshCw, Database } from 'lucide-react';
+import {
+  GitCompare,
+  Upload,
+  FileArchive,
+  AlertTriangle,
+  RefreshCw,
+  Database,
+  Eye,
+  Trash2,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { api, type SodCompareUploadsPayload } from '@/lib/api';
+import {
+  api,
+  type SodCompareUploadsPayload,
+  type SodUploadPreviewPayload,
+} from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/lib/utils';
@@ -38,11 +51,36 @@ function SodCompareInner() {
   const [toFile, setToFile] = useState<File | null>(null);
   const [includeLcbo, setIncludeLcbo] = useState(true);
   const [skuFilter, setSkuFilter] = useState('');
+  const [fromDatePick, setFromDatePick] = useState<string>('');  // when ZIP has multiple
+  const [toDatePick, setToDatePick] = useState<string>('');
+  const [fromPreview, setFromPreview] = useState<SodUploadPreviewPayload | null>(null);
   const [result, setResult] = useState<SodCompareUploadsPayload | null>(null);
   const [expandedSku, setExpandedSku] = useState<string | null>(null);
+  const [rollbackDate, setRollbackDate] = useState<string>('');
 
   const fromRef = useRef<HTMLInputElement>(null);
   const toRef = useRef<HTMLInputElement>(null);
+
+  const preview = useMutation({
+    mutationFn: () => {
+      const fd = new FormData();
+      if (!fromFile) throw new Error('Please pick a from-zip');
+      fd.append('zip', fromFile);
+      return api.sodUploadPreview(fd);
+    },
+    onSuccess: (r) => {
+      setFromPreview(r);
+      // Auto-pick latest date in the ZIP if user hasn't chosen one
+      if (!fromDatePick && r.dates_in_zip.length > 0) {
+        setFromDatePick(r.dates_in_zip[r.dates_in_zip.length - 1]);
+      }
+      toast.success(
+        `${formatNumber(r.tracked_rows_in_zip)} tracked rows across dates: ${r.dates_in_zip.join(', ')}`,
+        { duration: 8000 },
+      );
+    },
+    onError: (e: unknown) => toast.error((e as Error).message || 'Preview failed'),
+  });
 
   const compare = useMutation({
     mutationFn: () => {
@@ -50,13 +88,21 @@ function SodCompareInner() {
       if (!fromFile) throw new Error('Please pick a from-zip');
       fd.append('from_zip', fromFile);
       if (toFile) fd.append('to_zip', toFile);
+      if (fromDatePick) fd.append('from_date', fromDatePick);
+      if (toDatePick) fd.append('to_date', toDatePick);
       if (skuFilter) fd.append('sku', skuFilter);
       fd.append('include_lcbo', includeLcbo ? '1' : '0');
       return api.sodCompareUploads(fd);
     },
     onSuccess: (r) => {
       setResult(r);
-      toast.success(`Compared ${r.from_filename || 'file'} vs ${r.to_filename || 'DB latest'}`);
+      const fromLabel = r.from_date_used
+        ? `${r.from_filename} @ ${r.from_date_used}`
+        : r.from_filename;
+      const toLabel = r.to_date_used
+        ? `${r.to_filename} @ ${r.to_date_used}`
+        : r.to_filename;
+      toast.success(`Compared ${fromLabel} → ${toLabel}`, { duration: 6000 });
     },
     onError: (e: unknown) => {
       toast.error((e as Error).message || 'Compare failed');
@@ -68,17 +114,33 @@ function SodCompareInner() {
       const fd = new FormData();
       if (!fromFile) throw new Error('Please pick a zip first');
       fd.append('zip', fromFile);
+      // If user picked a specific date in the multi-date ZIP, only ingest that
+      if (fromDatePick && fromPreview && fromPreview.dates_in_zip.length > 1) {
+        fd.append('only_dates', fromDatePick);
+      }
       return api.sodUploadHistorical(fd);
     },
     onSuccess: (r) => {
       toast.success(
-        `Backfilled ${formatNumber(r.inserted)} rows for dates ${r.dates_in_zip.join(', ')}`,
-        { duration: 8000 },
+        `Backfilled ${formatNumber(r.inserted)} rows for dates ${r.dates_in_zip.join(', ')}. Skipped ${formatNumber(r.skipped_existing)} that already existed.`,
+        { duration: 10000 },
       );
     },
     onError: (e: unknown) => {
       toast.error((e as Error).message || 'Upload failed');
     },
+  });
+
+  const rollback = useMutation({
+    mutationFn: (snapshot_date: string) => api.sodRollbackSnapshot(snapshot_date),
+    onSuccess: (r) => {
+      toast.success(
+        `Rolled back ${r.snapshot_date}: deleted ${formatNumber(r.deleted_rows)} rows`,
+        { duration: 8000 },
+      );
+      setRollbackDate('');
+    },
+    onError: (e: unknown) => toast.error((e as Error).message || 'Rollback failed'),
   });
 
   return (
@@ -126,13 +188,22 @@ function SodCompareInner() {
           <FileSlot
             label="From snapshot (REQUIRED) — the historical baseline"
             file={fromFile}
-            onChange={setFromFile}
+            onChange={(f) => {
+              setFromFile(f);
+              setFromPreview(null);
+              setFromDatePick('');
+              setResult(null);
+            }}
             inputRef={fromRef}
           />
           <FileSlot
             label="To snapshot (optional) — defaults to latest in DB if omitted"
             file={toFile}
-            onChange={setToFile}
+            onChange={(f) => {
+              setToFile(f);
+              setToDatePick('');
+              setResult(null);
+            }}
             inputRef={toRef}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -158,6 +229,19 @@ function SodCompareInner() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
+              variant="secondary"
+              onClick={() => preview.mutate()}
+              disabled={!fromFile || preview.isPending}
+              title="Inspect the ZIP without persisting — shows dates inside + per-SKU counts"
+            >
+              {preview.isPending ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                <Eye size={14} />
+              )}
+              {preview.isPending ? 'Parsing…' : 'Preview file'}
+            </Button>
+            <Button
               onClick={() => compare.mutate()}
               disabled={!fromFile || compare.isPending}
             >
@@ -182,6 +266,140 @@ function SodCompareInner() {
               {upload.isPending ? 'Backfilling…' : 'Backfill into DB'}
             </Button>
           </div>
+
+          {/* Date picker — shown after Preview if ZIP has multiple dates */}
+          {fromPreview && fromPreview.dates_in_zip.length > 1 && (
+            <div className="rounded-lg border border-[rgba(212,165,116,0.3)] bg-[rgba(212,165,116,0.04)] p-3 space-y-2">
+              <div className="text-xs font-semibold flex items-center gap-2">
+                <AlertTriangle size={12} className="text-[var(--color-accent)]" />
+                ZIP contains {fromPreview.dates_in_zip.length} dates — pick which one to use
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {fromPreview.dates_in_zip.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setFromDatePick(d)}
+                    className={`px-2.5 py-1 rounded text-xs font-mono ${
+                      fromDatePick === d
+                        ? 'bg-[var(--color-accent)] text-[#2a1f0f] font-semibold'
+                        : 'bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)]'
+                    }`}
+                  >
+                    {d}
+                    {fromPreview.existing_rows_per_date[d] ? (
+                      <span className="ml-1 text-[var(--color-warning)]">
+                        ({formatNumber(fromPreview.existing_rows_per_date[d])} already in DB)
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Preview panel */}
+      {fromPreview && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Preview: {fromPreview.filename}</CardTitle>
+            <CardDescription>
+              Total rows: {formatNumber(fromPreview.total_rows_in_zip)} ·
+              tracked: {formatNumber(fromPreview.tracked_rows_in_zip)} · dates:{' '}
+              {fromPreview.dates_in_zip.join(', ')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {fromPreview.per_date.map((d) => (
+              <div key={d.snapshot_date}>
+                <div className="text-xs font-semibold mb-1.5">
+                  {d.snapshot_date}
+                  {fromPreview.existing_rows_per_date[d.snapshot_date] > 0 && (
+                    <span className="text-[var(--color-warning)] ml-2 font-normal">
+                      · already has{' '}
+                      {formatNumber(fromPreview.existing_rows_per_date[d.snapshot_date])}{' '}
+                      rows in DB (re-upload will be a no-op)
+                    </span>
+                  )}
+                </div>
+                <table className="data-table w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th>SKU</th>
+                      <th>Product</th>
+                      <th>Listed</th>
+                      <th>Delisting</th>
+                      <th>Fully delisted</th>
+                      <th>Total</th>
+                      <th>On-hand (Listed)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.tracked_sku_rows.map((s) => (
+                      <tr key={s.sku}>
+                        <td className="font-mono">{s.sku}</td>
+                        <td>
+                          <span className="text-muted">{s.brand}</span> {s.product_name}
+                        </td>
+                        <td className="tabular-nums font-semibold text-[var(--color-success)]">
+                          {s.L}
+                        </td>
+                        <td className="tabular-nums text-[var(--color-warning)]">{s.D}</td>
+                        <td className="tabular-nums text-[var(--color-danger)]">{s.F}</td>
+                        <td className="tabular-nums">{s.total}</td>
+                        <td className="tabular-nums">{formatNumber(s.on_hand_listed)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rollback panel — escape hatch when you upload the wrong file */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Trash2 size={16} className="text-[var(--color-danger)]" />
+            Rollback a snapshot
+          </CardTitle>
+          <CardDescription>
+            If you backfilled the wrong ZIP or wrong date, delete the snapshot here.
+            Removes all rows for that date from <code>sod_inventory</code>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2 items-end">
+          <input
+            type="date"
+            value={rollbackDate}
+            onChange={(e) => setRollbackDate(e.target.value)}
+            className="select"
+          />
+          <Button
+            variant="secondary"
+            onClick={() => {
+              if (!rollbackDate) return;
+              if (
+                window.confirm(
+                  `DELETE all sod_inventory rows for ${rollbackDate}?\n\nThis cannot be undone (without re-uploading the ZIP).`,
+                )
+              ) {
+                rollback.mutate(rollbackDate);
+              }
+            }}
+            disabled={!rollbackDate || rollback.isPending}
+            title="Delete this snapshot from sod_inventory"
+          >
+            {rollback.isPending ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <Trash2 size={14} />
+            )}
+            {rollback.isPending ? 'Deleting…' : 'Delete snapshot'}
+          </Button>
         </CardContent>
       </Card>
 

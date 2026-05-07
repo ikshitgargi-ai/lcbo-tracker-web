@@ -191,6 +191,18 @@ export const api = {
       body: formData,
     }),
 
+  sodUploadPreview: (formData: FormData) =>
+    request<SodUploadPreviewPayload>('/api/admin/sod/upload-preview', {
+      method: 'POST',
+      body: formData,
+    }),
+
+  sodRollbackSnapshot: (snapshot_date: string) =>
+    request<SodRollbackPayload>('/api/admin/sod/rollback-snapshot', {
+      method: 'POST',
+      body: JSON.stringify({ snapshot_date, confirm: true }),
+    }),
+
   // ===== Hidden listings detector (4-pattern audit) =====
   hiddenListings: (params: {
     sku?: string;
@@ -905,7 +917,11 @@ export interface SodCompareUploadsPayload {
   from_filename: string;
   to_filename: string;
   from_dates_in_zip: string[];
+  /** Which date inside from_zip was actually used for the comparison.
+   *  May be null if the ZIP had no rows for tracked SKUs. */
+  from_date_used: string | null;
   to_dates: string[];
+  to_date_used: string | null;
   to_source: 'uploaded' | 'db_latest';
   sku_filter: string | null;
   include_lcbo_cross_check: boolean;
@@ -915,6 +931,12 @@ export interface SodCompareUploadsPayload {
     total_lcbo_only: number;
   };
   per_sku: SodComparePerSku[];
+  parse_stats: {
+    from_total_rows: number;
+    from_tracked_rows: number;
+    to_total_rows: number | null;
+    to_tracked_rows: number | null;
+  };
   how_to_read: string;
 }
 
@@ -925,6 +947,40 @@ export interface SodUploadHistoricalPayload {
   tracked_rows_in_zip: number;
   inserted: number;
   skipped_existing: number;
+  note: string;
+}
+
+export interface SodUploadPreviewPerSku {
+  sku: string;
+  product_name: string;
+  brand: string;
+  L: number;
+  D: number;
+  F: number;
+  total: number;
+  on_hand_listed: number;
+}
+
+export interface SodUploadPreviewPerDate {
+  snapshot_date: string;
+  tracked_sku_rows: SodUploadPreviewPerSku[];
+}
+
+export interface SodUploadPreviewPayload {
+  as_of: string;
+  filename: string;
+  total_rows_in_zip: number;
+  tracked_rows_in_zip: number;
+  dates_in_zip: string[];
+  per_date: SodUploadPreviewPerDate[];
+  existing_rows_per_date: Record<string, number>;
+  note: string;
+}
+
+export interface SodRollbackPayload {
+  status: string;
+  snapshot_date: string;
+  deleted_rows: number;
   note: string;
 }
 
