@@ -62,10 +62,10 @@ export function MovementCard({
       <div className="grid grid-cols-3 divide-x divide-[var(--color-card-border)]">
         <Stat
           label="LCBO stores"
-          value={formatNumber(m?.store_universe.current_lcbo_stores ?? 0)}
+          value={formatNumber(m?.store_universe.lcbo_universe_total ?? 0)}
           sub={
-            m?.store_universe.snapshot_date
-              ? `as of ${m.store_universe.snapshot_date}`
+            m
+              ? `${formatNumber(m.store_universe.stores_carrying_our_skus)} carry us (${m.store_universe.carrying_pct}%)`
               : 'loading…'
           }
           icon={<StoreIcon size={14} className="text-[var(--color-muted)]" />}
@@ -122,26 +122,32 @@ export function MovementCard({
             )}
           </div>
 
-          {/* Store-universe drift */}
+          {/* Store coverage */}
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1.5">
-              CRM ↔ LCBO sync
+              Distribution coverage
             </div>
             <div className="space-y-1 text-xs">
               <Row
-                label="Our CRM stores"
-                value={formatNumber(m.store_universe.crm_stores)}
+                label="LCBO total"
+                value={formatNumber(m.store_universe.lcbo_universe_total)}
               />
               <Row
-                label="CRM but not in latest LCBO"
-                value={formatNumber(m.store_universe.crm_minus_lcbo)}
-                warn={m.store_universe.crm_minus_lcbo > 0}
+                label="Carrying ≥1 of our SKUs"
+                value={`${formatNumber(m.store_universe.stores_carrying_our_skus)} (${m.store_universe.carrying_pct}%)`}
               />
               <Row
-                label="LCBO but not in our CRM"
-                value={formatNumber(m.store_universe.lcbo_minus_crm)}
-                warn={m.store_universe.lcbo_minus_crm > 0}
+                label="No listing yet"
+                value={formatNumber(m.store_universe.stores_without_our_skus)}
+                warn
               />
+              {m.store_universe.stores_in_sod_not_in_crm > 0 && (
+                <Row
+                  label="In SOD but not in our directory"
+                  value={formatNumber(m.store_universe.stores_in_sod_not_in_crm)}
+                  warn
+                />
+              )}
             </div>
           </div>
 

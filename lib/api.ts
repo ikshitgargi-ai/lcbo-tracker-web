@@ -781,10 +781,21 @@ export interface MovementPayload {
   tracked_only: boolean;
   store_universe: {
     snapshot_date: string | null;
-    current_lcbo_stores: number;
-    crm_stores: number;
-    crm_minus_lcbo: number;
-    lcbo_minus_crm: number;
+    /** Authoritative LCBO universe — from our master `stores` directory. */
+    lcbo_universe_total: number;
+    /** Stores that carry at least one of our 8 tracked SKUs in the latest SOD snapshot. */
+    stores_carrying_our_skus: number;
+    /** Stores in our directory that don't currently carry any of our SKUs (= listing opportunities). */
+    stores_without_our_skus: number;
+    /** Stores in latest SOD snapshot that aren't in our master directory (= un-onboarded). */
+    stores_in_sod_not_in_crm: number;
+    /** Pct of LCBO universe that carries at least one of our SKUs. */
+    carrying_pct: number;
+    // Legacy aliases — present for backward compat, prefer the typed names above.
+    current_lcbo_stores?: number;
+    crm_stores?: number;
+    crm_minus_lcbo?: number;
+    lcbo_minus_crm?: number;
     error?: string;
   };
   new_stores: {
