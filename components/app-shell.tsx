@@ -48,6 +48,7 @@ const NAV = [
   { href: '/anu-import', label: 'Anu Import', icon: Tag },
   { href: '/route-planner', label: 'Route Planner', icon: Navigation },
   { href: '/log', label: 'Log Visit', icon: Plus },
+  { href: '/new-listings', label: 'New Listings (date range)', icon: TrendingUp },
   { href: '/tastings', label: 'Tastings (Book + Calendar)', icon: Calendar },
   { href: '/follow-ups', label: 'Tasting Follow-ups', icon: AlertTriangle },
   { href: '/pipeline', label: 'Pipeline', icon: Target },
@@ -74,6 +75,7 @@ const NAV_SECONDARY = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const [commissionUnlocked, setCommissionUnlocked] = useState(false);
 
   // Close mobile nav on route change
   useEffect(() => setOpen(false), [pathname]);
@@ -86,6 +88,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = '';
     };
   }, [open]);
+
+  // Re-read passcode-gate state on every route change so the link
+  // appears/disappears within the same session.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      setCommissionUnlocked(window.localStorage.getItem('commission_audit_unlocked') === '1');
+    } catch {
+      setCommissionUnlocked(false);
+    }
+  }, [pathname]);
+
+  // Filter NAV_SECONDARY to hide Commission Audit unless unlocked
+  const visibleSecondary = NAV_SECONDARY.filter((item) =>
+    item.href === '/commission-audit' ? commissionUnlocked : true,
+  );
 
   return (
     <div className="min-h-[100dvh] bg-brand-grad">
@@ -134,7 +152,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="mt-4 mb-2 px-3 text-[10px] uppercase tracking-wider text-[var(--color-muted)] font-semibold">
                 More
               </div>
-              {NAV_SECONDARY.map((item) => (
+              {visibleSecondary.map((item) => (
                 <NavLink key={item.href} item={item} active={pathname === item.href} />
               ))}
             </div>

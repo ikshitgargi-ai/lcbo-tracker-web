@@ -8,13 +8,29 @@ import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/lib/utils';
+import { PasscodeGate } from '@/components/passcode-gate';
 
 /**
  * Commission Audit — every store-SKU where SOD undercounts vs lcbo.com or
  * a rep observation. Each lcbo_only row is a potential listing we are not
  * being paid for. Export CSV → submit to brand owner.
+ *
+ * Passcode-gated (operator-only) — reps don't see this page.
  */
 export default function CommissionAuditPage() {
+  return (
+    <PasscodeGate
+      storageKey="commission_audit_unlocked"
+      passcode="0257"
+      title="Commission Audit"
+      description="Operator-only view. Enter passcode to continue."
+    >
+      <CommissionAuditPageInner />
+    </PasscodeGate>
+  );
+}
+
+function CommissionAuditPageInner() {
   const [days, setDays] = useState(7);
   const [skuFilter, setSkuFilter] = useState<string>('');
   const [includeMatches, setIncludeMatches] = useState(false);

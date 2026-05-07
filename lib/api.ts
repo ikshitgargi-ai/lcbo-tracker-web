@@ -151,6 +151,23 @@ export const api = {
     return request<StoreUniversePayload>(`/api/admin/store-universe?${qs.toString()}`);
   },
 
+  // ===== New-listings-by-range (snapshot diff + lcbo.com triple-check) =====
+  newListingsByRange: (params: {
+    start?: string;
+    end?: string;
+    sku?: string;
+    include_lcbo?: boolean;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.start) qs.set('start', params.start);
+    if (params.end) qs.set('end', params.end);
+    if (params.sku) qs.set('sku', params.sku);
+    if (params.include_lcbo === false) qs.set('include_lcbo', '0');
+    return request<NewListingsByRangePayload>(
+      `/api/admin/new-listings-by-range?${qs.toString()}`,
+    );
+  },
+
   // ===== Commission audit + rep observation override =====
   commissionAudit: (params: { sku?: string; days?: number; include_matches?: boolean } = {}) => {
     const qs = new URLSearchParams();
@@ -781,6 +798,51 @@ export interface NearbyPayload {
   sku: string | null;
   results: NearbyStore[];
   total_within_radius: number;
+}
+
+export interface NewListingStoreRow {
+  store_number: number;
+  /** 'sod' = caught by SOD diff; 'lcbo_only' = SOD missed it but lcbo.com saw it; 'rep_only' = rep observation only */
+  discovered_via: 'sod' | 'lcbo_only' | 'rep_only';
+  lcbo_confirmed: boolean;
+  rep_confirmed: boolean;
+}
+
+export interface NewListingsPerSkuRow {
+  sku: string;
+  product_name: string;
+  brand: string;
+  start_snapshot_date: string | null;
+  end_snapshot_date: string | null;
+  sod_new_count: number;
+  lcbo_only_new_count: number;
+  rep_only_new_count: number;
+  union_new_count: number;
+  sod_lost_count: number;
+  net_change: number;
+  start_listed_count: number;
+  end_listed_count: number;
+  lcbo_confirmed_count: number;
+  rep_confirmed_count: number;
+  new_stores: NewListingStoreRow[];
+  lost_stores: number[];
+  error?: string;
+}
+
+export interface NewListingsByRangePayload {
+  window: { start: string; end: string; days: number };
+  sku_filter: string | null;
+  include_lcbo_cross_check: boolean;
+  summary: {
+    total_new_listings: number;
+    total_lost_listings: number;
+    net_change: number;
+    lcbo_confirmed_new: number;
+    rep_confirmed_new: number;
+  };
+  per_sku: NewListingsPerSkuRow[];
+  how_to_read: string;
+  as_of: string;
 }
 
 export interface StoreUniversePayload {
