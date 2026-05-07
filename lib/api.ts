@@ -14,12 +14,20 @@ export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? 'https://lcbo-tracker.onrender.com';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // For FormData (multipart) bodies, let the browser set Content-Type
+  // automatically — including the boundary parameter. Manually setting
+  // 'application/json' would break the upload.
+  const isFormData =
+    typeof FormData !== 'undefined' && init?.body instanceof FormData;
+  const headers = isFormData
+    ? init?.headers
+    : {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      };
   const r = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
   if (!r.ok) {
     let detail = '';
@@ -167,6 +175,21 @@ export const api = {
       `/api/admin/new-listings-by-range?${qs.toString()}`,
     );
   },
+
+  // ===== SOD Compare Uploads — the user's preferred way to compute new
+  // listings between any two dates: download SOD ZIPs from sod.lcbo.com
+  // and have the app diff them directly. =====
+  sodCompareUploads: (formData: FormData) =>
+    request<SodCompareUploadsPayload>('/api/admin/sod/compare-uploads', {
+      method: 'POST',
+      body: formData,
+    }),
+
+  sodUploadHistorical: (formData: FormData) =>
+    request<SodUploadHistoricalPayload>('/api/admin/sod/upload-historical', {
+      method: 'POST',
+      body: formData,
+    }),
 
   // ===== Hidden listings detector (4-pattern audit) =====
   hiddenListings: (params: {
@@ -833,10 +856,13 @@ export interface NewListingsPerSkuRow {
   brand: string;
   start_snapshot_date: string | null;
   end_snapshot_date: string | null;
-  /** True if the requested start date predates our earliest SOD history for this SKU.
-   *  In that case start_snapshot_date is the earliest snapshot we have and the count
-   *  is "since we started tracking" rather than "since the requested start". */
+  /** True if the requested start date predates our SOD history for this SKU.
+   *  Counts will be 0 — operator should upload a historical SOD ZIP via /sod-compare. */
   start_was_clipped?: boolean;
+  /** When clipped, the earliest snapshot we DO have for this SKU. */
+  earliest_available_snapshot?: string | null;
+  /** When clipped, a human-readable message explaining what happened. */
+  message?: string;
   sod_new_count: number;
   lcbo_only_new_count: number;
   rep_only_new_count: number;
@@ -850,6 +876,56 @@ export interface NewListingsPerSkuRow {
   new_stores: NewListingStoreRow[];
   lost_stores: number[];
   error?: string;
+}
+
+export interface SodCompareAddedStore {
+  store_number: number;
+  discovered_via: 'sod' | 'lcbo_only';
+  lcbo_confirmed: boolean;
+}
+
+export interface SodComparePerSku {
+  sku: string;
+  product_name: string;
+  brand: string;
+  from_listed_count: number;
+  to_listed_count: number;
+  sod_added_count: number;
+  sod_lost_count: number;
+  lcbo_only_added_count: number;
+  lcbo_confirmed_added: number;
+  union_added_count: number;
+  net_change: number;
+  added_stores: SodCompareAddedStore[];
+  lost_stores: number[];
+}
+
+export interface SodCompareUploadsPayload {
+  as_of: string;
+  from_filename: string;
+  to_filename: string;
+  from_dates_in_zip: string[];
+  to_dates: string[];
+  to_source: 'uploaded' | 'db_latest';
+  sku_filter: string | null;
+  include_lcbo_cross_check: boolean;
+  summary: {
+    total_added: number;
+    total_lost: number;
+    total_lcbo_only: number;
+  };
+  per_sku: SodComparePerSku[];
+  how_to_read: string;
+}
+
+export interface SodUploadHistoricalPayload {
+  status: string;
+  filename: string;
+  dates_in_zip: string[];
+  tracked_rows_in_zip: number;
+  inserted: number;
+  skipped_existing: number;
+  note: string;
 }
 
 export interface HiddenListingGhost {

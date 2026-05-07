@@ -29,6 +29,7 @@ import {
   DollarSign,
   GitBranch,
   ShieldAlert,
+  GitCompare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +62,7 @@ const NAV = [
 const NAV_SECONDARY = [
   { href: '/commission-audit', label: 'Commission Audit ★', icon: DollarSign },
   { href: '/hidden-listings', label: 'Hidden Listings ★', icon: ShieldAlert },
+  { href: '/sod-compare', label: 'SOD Compare ★', icon: GitCompare },
   { href: '/source-drift', label: 'Source Drift ★', icon: GitBranch },
   { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
   { href: '/opportunities', label: 'Opportunities', icon: Trophy },
@@ -103,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   // Filter NAV_SECONDARY to hide passcode-gated pages unless unlocked
-  const lockedRoutes = new Set(['/commission-audit', '/hidden-listings']);
+  const lockedRoutes = new Set(['/commission-audit', '/hidden-listings', '/sod-compare']);
   const visibleSecondary = NAV_SECONDARY.filter((item) =>
     lockedRoutes.has(item.href) ? commissionUnlocked : true,
   );

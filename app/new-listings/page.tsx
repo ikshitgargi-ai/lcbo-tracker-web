@@ -259,13 +259,27 @@ export default function NewListingsPage() {
                           <div className="text-[10px] text-muted mb-2">
                             Snapshots compared: {r.start_snapshot_date ?? '—'} →{' '}
                             {r.end_snapshot_date ?? '—'}
-                            {r.start_was_clipped && (
-                              <span className="ml-2 text-[var(--color-warning)]">
-                                ⚠ Requested start predates our SOD history. Showing count
-                                since we started tracking ({r.start_snapshot_date}).
-                              </span>
-                            )}
                           </div>
+                          {r.start_was_clipped && (
+                            <div className="m-card mb-3 border-[rgba(253,203,110,0.4)] bg-[rgba(253,203,110,0.06)] flex items-start gap-2">
+                              <AlertTriangle size={14} className="text-[var(--color-warning)] shrink-0 mt-0.5" />
+                              <div className="text-xs">
+                                <div className="font-semibold mb-1">
+                                  Cannot compute diff for this SKU
+                                </div>
+                                <div className="text-muted">
+                                  {r.message ??
+                                    `Our SOD ingest started on ${r.earliest_available_snapshot ?? 'unknown date'} — the requested start predates our history.`}
+                                </div>
+                                <Link
+                                  href="/sod-compare"
+                                  className="text-[var(--color-accent)] underline text-xs mt-2 inline-block"
+                                >
+                                  → Upload a historical SOD ZIP via /sod-compare
+                                </Link>
+                              </div>
+                            </div>
+                          )}
                           {r.new_stores.length === 0 ? (
                             <div className="text-xs text-muted py-2">
                               No new stores in this window.
