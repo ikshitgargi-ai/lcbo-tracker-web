@@ -8,6 +8,7 @@ import { useActiveRep } from '@/lib/active-rep';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { FreshnessBanner } from '@/components/freshness-banner';
+import { MovementCard } from '@/components/movement-card';
 
 // Hardcoded official roster — was reading api.reps which omits reps without
 // prior activity. Reps self-select; activeRep persists in localStorage.
@@ -73,6 +74,9 @@ export default function TodayPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Authoritative movement counts — LCBO universe, new listings, new stores */}
+      <MovementCard defaultDays={7} />
 
       {!rep && (
         <div className="m-card text-center py-8">

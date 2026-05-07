@@ -133,6 +133,16 @@ export const api = {
       body: JSON.stringify({ question }),
     }),
 
+  // ===== Movement (authoritative store + listing counts) =====
+  movement: (params: { start?: string; end?: string; sku?: string; tracked_only?: boolean } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.start) qs.set('start', params.start);
+    if (params.end) qs.set('end', params.end);
+    if (params.sku) qs.set('sku', params.sku);
+    if (params.tracked_only === false) qs.set('tracked_only', '0');
+    return request<MovementPayload>(`/api/admin/movement?${qs.toString()}`);
+  },
+
   // ===== Commission audit + rep observation override =====
   commissionAudit: (params: { sku?: string; days?: number; include_matches?: boolean } = {}) => {
     const qs = new URLSearchParams();
@@ -763,6 +773,41 @@ export interface NearbyPayload {
   sku: string | null;
   results: NearbyStore[];
   total_within_radius: number;
+}
+
+export interface MovementPayload {
+  window: { start: string; end: string; days: number };
+  sku_filter: string | null;
+  tracked_only: boolean;
+  store_universe: {
+    snapshot_date: string | null;
+    current_lcbo_stores: number;
+    crm_stores: number;
+    crm_minus_lcbo: number;
+    lcbo_minus_crm: number;
+    error?: string;
+  };
+  new_stores: {
+    added_in_range: number;
+    store_list: Array<{ store_number: number; first_seen_date: string }>;
+    error?: string;
+  };
+  listings: {
+    new_in_range: number;
+    delisted_in_range: number;
+    relisted_in_range: number;
+    per_sku: Array<{ sku: string; product_name: string; brand: string; new_listings: number }>;
+    per_day: Array<{ date: string; NEW_LISTING: number; DELISTED: number; RELISTED: number }>;
+    sample_new_listings: Array<{
+      date: string;
+      sku: string;
+      product_name: string;
+      brand: string;
+      store_number: number | null;
+    }>;
+    error?: string;
+  };
+  as_of: string;
 }
 
 export type CommissionVerdict = 'lcbo_only' | 'sod_only_empty' | 'sod_only_stale' | 'agree';
