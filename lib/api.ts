@@ -133,6 +133,27 @@ export const api = {
       body: JSON.stringify({ question }),
     }),
 
+  // ===== Commission audit + rep observation override =====
+  commissionAudit: (params: { sku?: string; days?: number; include_matches?: boolean } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.sku) qs.set('sku', params.sku);
+    if (params.days != null) qs.set('days', String(params.days));
+    if (params.include_matches) qs.set('include_matches', '1');
+    return request<CommissionAuditPayload>(`/api/admin/commission-audit?${qs.toString()}`);
+  },
+  observeListing: (body: {
+    sku: string;
+    store_number: number;
+    rep: string;
+    on_shelf?: boolean;
+    units?: number;
+    notes?: string;
+  }) =>
+    request<ObserveListingPayload>('/api/crm/observe-listing', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
   // ===== Tracked products =====
   trackedProducts: () => request<ProductRow[]>('/api/products'),
   sodProducts: (tracked = true) =>
@@ -742,6 +763,47 @@ export interface NearbyPayload {
   sku: string | null;
   results: NearbyStore[];
   total_within_radius: number;
+}
+
+export interface CommissionAuditRow {
+  sku: string;
+  product_name: string;
+  brand: string;
+  store_number: number;
+  verdict: 'lcbo_only' | 'sod_only' | 'agree';
+  claim_units: number;
+  sod_status: string | null;
+  sod_on_hand: number;
+  sod_snapshot_date: string | null;
+  lcbo_units: number;
+  lcbo_seen_at: string | null;
+  rep_observed: boolean;
+  rep_observation_at: string | null;
+  rep_observation_by: string | null;
+}
+
+export interface CommissionAuditPayload {
+  as_of: string;
+  window_days: number;
+  sku_filter: string | null;
+  summary: {
+    lcbo_only: number;
+    sod_only: number;
+    agree: number;
+    units_undercounted: number;
+  };
+  rows: CommissionAuditRow[];
+  how_to_use: string;
+}
+
+export interface ObserveListingPayload {
+  id: number;
+  sku: string;
+  store_number: number;
+  rep: string;
+  on_shelf: boolean;
+  recorded_at: string;
+  note: string;
 }
 
 export interface AiAskPayload {

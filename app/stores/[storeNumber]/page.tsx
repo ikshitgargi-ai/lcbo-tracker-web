@@ -14,6 +14,7 @@ import {
   Activity as ActivityIcon,
   Target,
   Zap,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, type DealStage } from '@/lib/api';
@@ -65,6 +66,29 @@ export default function StorePage({
     },
     onError: (err: unknown) => toast.error((err as Error).message),
   });
+
+  // "I saw it on shelf" override — feeds the commission audit reconciliation
+  const observe = useMutation({
+    mutationFn: (body: { sku: string; on_shelf: boolean; units?: number; notes?: string }) =>
+      api.observeListing({
+        sku: body.sku,
+        store_number: n,
+        rep: activeRep ?? '',
+        on_shelf: body.on_shelf,
+        units: body.units,
+        notes: body.notes,
+      }),
+    onSuccess: () => {
+      toast.success('Observation logged — counts toward your commission audit', {
+        duration: 5000,
+      });
+    },
+    onError: (err: unknown) => toast.error((err as Error).message),
+  });
+  const [showObserveForm, setShowObserveForm] = useState(false);
+  const [obsSku, setObsSku] = useState('');
+  const [obsUnits, setObsUnits] = useState<string>('');
+  const [obsNotes, setObsNotes] = useState('');
 
   const s = full.data?.store;
   const phone = s?.manager_phone || s?.phone || '';
@@ -254,6 +278,117 @@ export default function StorePage({
               None of our tracked SKUs are at this store right now.
             </div>
           )}
+
+          {/* "I saw it on shelf" — catches SOD undercounts so we get paid for
+              every actual listing. Submitted observations feed the
+              /commission-audit reconciliation. */}
+          <div className="m-card border-[rgba(212,165,116,0.3)] bg-[rgba(212,165,116,0.04)]">
+            <div className="flex items-start gap-3">
+              <Eye size={18} className="text-[var(--color-accent)] shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold">See a bottle SOD missed?</div>
+                <div className="text-xs text-muted mt-0.5">
+                  If you spot one of our SKUs on shelf but it&apos;s not in the list above,
+                  log it here. Each observation feeds our commission audit so we get paid
+                  for every actual listing.
+                </div>
+                {!showObserveForm ? (
+                  <button
+                    onClick={() => {
+                      if (!activeRep) {
+                        toast.error('Pick your rep name on /today first');
+                        return;
+                      }
+                      setShowObserveForm(true);
+                    }}
+                    className="mt-2 inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[var(--color-accent)] text-[#2a1f0f] text-sm font-semibold"
+                  >
+                    <Plus size={14} /> I saw it on shelf
+                  </button>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    <select
+                      value={obsSku}
+                      onChange={(e) => setObsSku(e.target.value)}
+                      className="select w-full"
+                    >
+                      <option value="">— pick a SKU —</option>
+                      {[
+                        { sku: '0020187', name: 'Red Admiral Vodka' },
+                        { sku: '0022246', name: 'Chak De Whisky' },
+                        { sku: '0046340', name: 'Goenchi Cashew Feni' },
+                        { sku: '0046343', name: 'Goenchi Coconut Feni' },
+                        { sku: '0046282', name: 'Fratelli Classic Shiraz' },
+                        { sku: '0046285', name: 'Fratelli Chenin Blanc' },
+                        { sku: '0046286', name: 'Fratelli Sauvignon Blanc' },
+                        { sku: '0046287', name: 'Fratelli Cabernet Sauvignon' },
+                      ].map((s) => (
+                        <option key={s.sku} value={s.sku}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="Approx units on shelf (optional)"
+                      value={obsUnits}
+                      onChange={(e) => setObsUnits(e.target.value)}
+                      className="select w-full"
+                      min={0}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Notes (optional)"
+                      value={obsNotes}
+                      onChange={(e) => setObsNotes(e.target.value)}
+                      className="select w-full"
+                      maxLength={500}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          if (!obsSku) {
+                            toast.error('Pick a SKU');
+                            return;
+                          }
+                          observe.mutate(
+                            {
+                              sku: obsSku,
+                              on_shelf: true,
+                              units: obsUnits ? Number(obsUnits) : undefined,
+                              notes: obsNotes || undefined,
+                            },
+                            {
+                              onSuccess: () => {
+                                setShowObserveForm(false);
+                                setObsSku('');
+                                setObsUnits('');
+                                setObsNotes('');
+                              },
+                            },
+                          );
+                        }}
+                        disabled={observe.isPending || !obsSku}
+                      >
+                        {observe.isPending ? 'Saving…' : 'Submit observation'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setShowObserveForm(false);
+                          setObsSku('');
+                          setObsUnits('');
+                          setObsNotes('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

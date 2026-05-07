@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Tag,
   Trophy,
+  DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +56,7 @@ const NAV = [
 
 // Secondary — only visible if explicitly opened (drawer "More" section)
 const NAV_SECONDARY = [
+  { href: '/commission-audit', label: 'Commission Audit ★', icon: DollarSign },
   { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
   { href: '/opportunities', label: 'Opportunities', icon: Trophy },
   { href: '/activity', label: 'Activity Feed', icon: Zap },
