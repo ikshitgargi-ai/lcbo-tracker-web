@@ -765,12 +765,14 @@ export interface NearbyPayload {
   total_within_radius: number;
 }
 
+export type CommissionVerdict = 'lcbo_only' | 'sod_only_empty' | 'sod_only_stale' | 'agree';
+
 export interface CommissionAuditRow {
   sku: string;
   product_name: string;
   brand: string;
   store_number: number;
-  verdict: 'lcbo_only' | 'sod_only' | 'agree';
+  verdict: CommissionVerdict;
   claim_units: number;
   sod_status: string | null;
   sod_on_hand: number;
@@ -788,7 +790,8 @@ export interface CommissionAuditPayload {
   sku_filter: string | null;
   summary: {
     lcbo_only: number;
-    sod_only: number;
+    sod_only_empty: number;
+    sod_only_stale: number;
     agree: number;
     units_undercounted: number;
   };

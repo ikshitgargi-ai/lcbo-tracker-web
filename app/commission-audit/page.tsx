@@ -55,11 +55,12 @@ export default function CommissionAuditPage() {
       </header>
 
       {/* Headline cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard
           label="Potential claims"
           value={formatNumber(audit.data?.summary.lcbo_only ?? 0)}
           danger
+          help="lcbo.com or rep saw stock; SOD missed"
         />
         <StatCard
           label="Units undercounted"
@@ -67,9 +68,15 @@ export default function CommissionAuditPage() {
           danger
         />
         <StatCard
-          label="SOD-only listings"
-          value={formatNumber(audit.data?.summary.sod_only ?? 0)}
+          label="Listed-but-empty"
+          value={formatNumber(audit.data?.summary.sod_only_empty ?? 0)}
+          help="Listed, on-hand=0 (real listing, just no stock)"
+        />
+        <StatCard
+          label="Listed-but-unconfirmed"
+          value={formatNumber(audit.data?.summary.sod_only_stale ?? 0)}
           warning
+          help="SOD says listed; no recent lcbo.com confirm"
         />
         <StatCard
           label="In agreement"
@@ -238,11 +245,13 @@ function StatCard({
   value,
   danger,
   warning,
+  help,
 }: {
   label: string;
   value: string;
   danger?: boolean;
   warning?: boolean;
+  help?: string;
 }) {
   const color = danger
     ? 'var(--color-danger)'
@@ -250,21 +259,36 @@ function StatCard({
       ? 'var(--color-warning)'
       : 'var(--color-foreground)';
   return (
-    <div className="rounded-lg border border-[var(--color-card-border)] p-3 bg-[rgba(255,255,255,0.02)]">
+    <div
+      className="rounded-lg border border-[var(--color-card-border)] p-3 bg-[rgba(255,255,255,0.02)]"
+      title={help}
+    >
       <div className="text-[10px] uppercase tracking-wider text-[var(--color-muted)]">
         {label}
       </div>
       <div className="text-2xl font-semibold mt-1" style={{ color }}>
         {value}
       </div>
+      {help && <div className="text-[10px] text-[var(--color-muted)] mt-1">{help}</div>}
     </div>
   );
 }
 
-function VerdictBadge({ verdict }: { verdict: 'lcbo_only' | 'sod_only' | 'agree' }) {
+function VerdictBadge({
+  verdict,
+}: {
+  verdict: 'lcbo_only' | 'sod_only_empty' | 'sod_only_stale' | 'agree';
+}) {
   const map = {
     lcbo_only: { label: 'CLAIM', cls: 'bg-[rgba(239,75,75,0.12)] text-[var(--color-danger)]' },
-    sod_only: { label: 'STALE?', cls: 'bg-[rgba(253,203,110,0.12)] text-[var(--color-warning)]' },
+    sod_only_stale: {
+      label: 'STALE?',
+      cls: 'bg-[rgba(253,203,110,0.12)] text-[var(--color-warning)]',
+    },
+    sod_only_empty: {
+      label: 'EMPTY',
+      cls: 'bg-[rgba(255,255,255,0.06)] text-[var(--color-muted)]',
+    },
     agree: { label: 'AGREE', cls: 'bg-[rgba(120,200,140,0.10)] text-[var(--color-success)]' },
   } as const;
   const m = map[verdict];
