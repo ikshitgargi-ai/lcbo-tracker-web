@@ -259,6 +259,12 @@ export default function NewListingsPage() {
                           <div className="text-[10px] text-muted mb-2">
                             Snapshots compared: {r.start_snapshot_date ?? '—'} →{' '}
                             {r.end_snapshot_date ?? '—'}
+                            {r.start_was_clipped && (
+                              <span className="ml-2 text-[var(--color-warning)]">
+                                ⚠ Requested start predates our SOD history. Showing count
+                                since we started tracking ({r.start_snapshot_date}).
+                              </span>
+                            )}
                           </div>
                           {r.new_stores.length === 0 ? (
                             <div className="text-xs text-muted py-2">

@@ -814,6 +814,10 @@ export interface NewListingsPerSkuRow {
   brand: string;
   start_snapshot_date: string | null;
   end_snapshot_date: string | null;
+  /** True if the requested start date predates our earliest SOD history for this SKU.
+   *  In that case start_snapshot_date is the earliest snapshot we have and the count
+   *  is "since we started tracking" rather than "since the requested start". */
+  start_was_clipped?: boolean;
   sod_new_count: number;
   lcbo_only_new_count: number;
   rep_only_new_count: number;
