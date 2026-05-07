@@ -168,6 +168,25 @@ export const api = {
     );
   },
 
+  // ===== Hidden listings detector (4-pattern audit) =====
+  hiddenListings: (params: {
+    sku?: string;
+    lookback_days?: number;
+    flicker_min?: number;
+    mass_delist_pct?: number;
+    lcbo_window_h?: number;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.sku) qs.set('sku', params.sku);
+    if (params.lookback_days != null) qs.set('lookback_days', String(params.lookback_days));
+    if (params.flicker_min != null) qs.set('flicker_min', String(params.flicker_min));
+    if (params.mass_delist_pct != null) qs.set('mass_delist_pct', String(params.mass_delist_pct));
+    if (params.lcbo_window_h != null) qs.set('lcbo_window_h', String(params.lcbo_window_h));
+    return request<HiddenListingsPayload>(
+      `/api/admin/hidden-listings?${qs.toString()}`,
+    );
+  },
+
   // ===== Commission audit + rep observation override =====
   commissionAudit: (params: { sku?: string; days?: number; include_matches?: boolean } = {}) => {
     const qs = new URLSearchParams();
@@ -831,6 +850,81 @@ export interface NewListingsPerSkuRow {
   new_stores: NewListingStoreRow[];
   lost_stores: number[];
   error?: string;
+}
+
+export interface HiddenListingGhost {
+  sku: string;
+  product_name: string;
+  brand: string;
+  store_number: number;
+  last_listed_date: string | null;
+  days_since_last_listed: number | null;
+  pattern: 'ghost';
+  evidence: string;
+}
+
+export interface HiddenListingHidden {
+  sku: string;
+  product_name: string;
+  brand: string;
+  store_number: number;
+  sod_status: string;
+  lcbo_units: number;
+  lcbo_seen_at: string | null;
+  rep_observed_at: string | null;
+  rep_observed_by: string | null;
+  pattern: 'hidden_inventory';
+  evidence: string;
+}
+
+export interface HiddenListingFlicker {
+  sku: string;
+  product_name: string;
+  brand: string;
+  store_number: number;
+  flip_count: number;
+  first_flip_date: string;
+  last_flip_date: string;
+  sequence: string;
+  pattern: 'flicker';
+  evidence: string;
+}
+
+export interface HiddenListingMassDelist {
+  sku: string;
+  product_name: string;
+  brand: string;
+  snapshot_date: string;
+  listed_count: number;
+  prev_count: number;
+  drop_count: number;
+  drop_pct: number;
+  pattern: 'mass_delist';
+  evidence: string;
+}
+
+export interface HiddenListingsPayload {
+  as_of: string;
+  params: {
+    lookback_days: number;
+    flicker_min: number;
+    mass_delist_pct: number;
+    lcbo_window_h: number;
+    sku_filter: string | null;
+  };
+  summary: {
+    total_ghost: number;
+    total_hidden_inventory: number;
+    total_flicker: number;
+    total_mass_delist_events: number;
+  };
+  patterns: {
+    ghost_listings: HiddenListingGhost[];
+    hidden_inventory: HiddenListingHidden[];
+    flicker_patterns: HiddenListingFlicker[];
+    mass_delist_days: HiddenListingMassDelist[];
+  };
+  how_to_read: string;
 }
 
 export interface NewListingsByRangePayload {
