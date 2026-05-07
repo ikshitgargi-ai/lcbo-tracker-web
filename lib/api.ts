@@ -143,6 +143,14 @@ export const api = {
     return request<MovementPayload>(`/api/admin/movement?${qs.toString()}`);
   },
 
+  // ===== Source-drift (UNION of SOD + lcbo.com + master + rep observations) =====
+  storeUniverse: (params: { lcbo_hours?: number; verbose?: boolean } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.lcbo_hours != null) qs.set('lcbo_hours', String(params.lcbo_hours));
+    if (params.verbose) qs.set('verbose', '1');
+    return request<StoreUniversePayload>(`/api/admin/store-universe?${qs.toString()}`);
+  },
+
   // ===== Commission audit + rep observation override =====
   commissionAudit: (params: { sku?: string; days?: number; include_matches?: boolean } = {}) => {
     const qs = new URLSearchParams();
@@ -775,6 +783,48 @@ export interface NearbyPayload {
   total_within_radius: number;
 }
 
+export interface StoreUniversePayload {
+  as_of: string;
+  lcbo_window_hours: number;
+  universe_stats: {
+    total_universe_size: number;
+    in_all_three: number;
+    in_master_only: number;
+    in_sod_only: number;
+    in_lcbo_only: number;
+    in_master_and_sod: number;
+    in_master_and_lcbo: number;
+    in_sod_and_lcbo: number;
+  };
+  carrying_stats: {
+    total_stores_carrying_any_sku: number;
+    sod_only: number;
+    lcbo_only: number;
+    rep_only: number;
+    sod_and_lcbo: number;
+    all_three: number;
+  };
+  drift: {
+    sod_only_stores: number[];
+    lcbo_only_stores: number[];
+    master_only_stores: number[];
+    carrying_us_only_in_sod: number[];
+    carrying_us_only_in_lcbo: number[];
+    carrying_us_only_via_rep: number[];
+  };
+  how_to_read: string;
+  per_store?: Record<
+    string,
+    {
+      in_master: boolean;
+      in_sod_latest: boolean;
+      in_lcbo_recent: boolean;
+      carrying_skus: string[];
+      carrying_sources: string[];
+    }
+  >;
+}
+
 export interface MovementPayload {
   window: { start: string; end: string; days: number };
   sku_filter: string | null;
@@ -791,6 +841,24 @@ export interface MovementPayload {
     stores_in_sod_not_in_crm: number;
     /** Pct of LCBO universe that carries at least one of our SKUs. */
     carrying_pct: number;
+    /** UNION across master + SOD + lcbo.com — the authoritative count. */
+    union_total_stores?: number;
+    /** Stores carrying any of our SKUs across ANY source (the truth, ignoring single-source gaps). */
+    carrying_us_anywhere?: number;
+    /** Carrying-us only in SOD (lcbo.com hasn't confirmed). */
+    carrying_only_sod?: number;
+    /** Carrying-us only on lcbo.com (SOD missed → potential commission claim). */
+    carrying_only_lcbo?: number;
+    /** Carrying-us only flagged by a rep on shelf (manual override). */
+    carrying_only_rep_observed?: number;
+    /** Carrying-us confirmed by both SOD and lcbo.com. */
+    carrying_in_sod_and_lcbo?: number;
+    /** Per-source drift breakdown. */
+    source_drift?: {
+      in_sod_not_master: number;
+      in_lcbo_not_master: number;
+      in_master_not_either: number;
+    };
     // Legacy aliases — present for backward compat, prefer the typed names above.
     current_lcbo_stores?: number;
     crm_stores?: number;

@@ -27,6 +27,7 @@ import {
   Tag,
   Trophy,
   DollarSign,
+  GitBranch,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +58,7 @@ const NAV = [
 // Secondary — only visible if explicitly opened (drawer "More" section)
 const NAV_SECONDARY = [
   { href: '/commission-audit', label: 'Commission Audit ★', icon: DollarSign },
+  { href: '/source-drift', label: 'Source Drift ★', icon: GitBranch },
   { href: '/oos', label: 'OOS Risk', icon: AlertTriangle },
   { href: '/opportunities', label: 'Opportunities', icon: Trophy },
   { href: '/activity', label: 'Activity Feed', icon: Zap },

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, MinusCircle, Store as StoreIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import Link from 'next/link';
+import { TrendingUp, MinusCircle, Store as StoreIcon, ChevronDown, ChevronUp, GitBranch } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatNumber } from '@/lib/utils';
 
@@ -61,11 +62,13 @@ export function MovementCard({
       {/* Three-stat compact view */}
       <div className="grid grid-cols-3 divide-x divide-[var(--color-card-border)]">
         <Stat
-          label="LCBO stores"
-          value={formatNumber(m?.store_universe.lcbo_universe_total ?? 0)}
+          label="LCBO universe"
+          value={formatNumber(
+            m?.store_universe.union_total_stores ?? m?.store_universe.lcbo_universe_total ?? 0
+          )}
           sub={
             m
-              ? `${formatNumber(m.store_universe.stores_carrying_our_skus)} carry us (${m.store_universe.carrying_pct}%)`
+              ? `${formatNumber(m.store_universe.carrying_us_anywhere ?? m.store_universe.stores_carrying_our_skus)} carry us`
               : 'loading…'
           }
           icon={<StoreIcon size={14} className="text-[var(--color-muted)]" />}
@@ -84,6 +87,27 @@ export function MovementCard({
           icon={<MinusCircle size={14} className="text-[var(--color-muted)]" />}
         />
       </div>
+
+      {/* Source-drift hint badge if any disagreements */}
+      {m && (m.store_universe.carrying_only_lcbo ?? 0) + (m.store_universe.carrying_only_sod ?? 0) > 0 && (
+        <Link
+          href="/source-drift"
+          className="block px-4 py-2 text-xs border-t border-[var(--color-card-border)] bg-[rgba(212,165,116,0.04)] hover:bg-[rgba(212,165,116,0.08)] flex items-center gap-2"
+        >
+          <GitBranch size={12} className="text-[var(--color-accent)]" />
+          <span className="flex-1">
+            <span className="text-[var(--color-danger)] font-semibold">
+              {m.store_universe.carrying_only_lcbo}
+            </span>{' '}
+            stores carry us only on lcbo.com,{' '}
+            <span className="text-[var(--color-warning)] font-semibold">
+              {m.store_universe.carrying_only_sod}
+            </span>{' '}
+            only in SOD →
+          </span>
+          <span className="text-[var(--color-accent)]">View Source Drift</span>
+        </Link>
+      )}
 
       {/* Expand toggle */}
       <button
