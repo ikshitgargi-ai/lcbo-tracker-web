@@ -203,6 +203,13 @@ export const api = {
       body: JSON.stringify({ snapshot_date, confirm: true }),
     }),
 
+  // ===== Rep behavior analysis =====
+  repBehavior: (params: { days?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.days != null) qs.set('days', String(params.days));
+    return request<RepBehaviorPayload>(`/api/admin/rep-behavior?${qs.toString()}`);
+  },
+
   // ===== Hidden listings detector (4-pattern audit) =====
   hiddenListings: (params: {
     sku?: string;
@@ -982,6 +989,38 @@ export interface SodRollbackPayload {
   snapshot_date: string;
   deleted_rows: number;
   note: string;
+}
+
+export interface RepBehaviorPerRep {
+  rep: string;
+  window_days: number;
+  visits_total: number;
+  unique_stores: number;
+  repeat_visits: number;
+  repeat_visit_pct: number;
+  active_days: number;
+  days_since_last_visit: number | null;
+  territory_size: number;
+  coverage_pct: number | null;
+  listings_won_in_window: number;
+  visit_pace_per_active_day: number | null;
+  high_repeat_stores: Array<{
+    store_number: number;
+    account: string;
+    city: string;
+    visits: number;
+    last_visit: string | null;
+  }>;
+  top_cities: Array<{ city: string; visits: number }>;
+  behavior_flags: string[];
+}
+
+export interface RepBehaviorPayload {
+  as_of: string;
+  window_days: number;
+  per_rep: RepBehaviorPerRep[];
+  global_findings: string[];
+  how_to_read: string;
 }
 
 export interface HiddenListingGhost {
