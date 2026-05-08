@@ -165,12 +165,14 @@ export const api = {
     end?: string;
     sku?: string;
     include_lcbo?: boolean;
+    strict_mode?: boolean;
   } = {}) => {
     const qs = new URLSearchParams();
     if (params.start) qs.set('start', params.start);
     if (params.end) qs.set('end', params.end);
     if (params.sku) qs.set('sku', params.sku);
     if (params.include_lcbo === false) qs.set('include_lcbo', '0');
+    if (params.strict_mode === false) qs.set('strict_mode', '0');
     return request<NewListingsByRangePayload>(
       `/api/admin/new-listings-by-range?${qs.toString()}`,
     );
@@ -865,6 +867,14 @@ export interface NewListingStoreRow {
   store_number: number;
   /** 'sod' = caught by SOD diff; 'lcbo_only' = SOD missed it but lcbo.com saw it; 'rep_only' = rep observation only */
   discovered_via: 'sod' | 'lcbo_only' | 'rep_only';
+  /** True iff the store has a verified change event OR independent source confirmation. */
+  confirmed_new: boolean;
+  /** True iff sod_listing_changes recorded NEW_LISTING/RELISTED for this (sku, store) in window. */
+  has_change_event: boolean;
+  /** If our SOD history shows the store was Listed BEFORE the window, this date. Means it's not actually new. */
+  last_listed_before_window: string | null;
+  /** Human-readable explanation of why this row is/isn't a confirmed new listing. */
+  evidence: string;
   lcbo_confirmed: boolean;
   rep_confirmed: boolean;
 }
@@ -882,6 +892,10 @@ export interface NewListingsPerSkuRow {
   earliest_available_snapshot?: string | null;
   /** When clipped, a human-readable message explaining what happened. */
   message?: string;
+  /** Number of stores in new_stores that pass the verification check. */
+  confirmed_new_count?: number;
+  /** Number of stores in new_stores that DON'T pass — likely baseline gaps. */
+  unconfirmed_count?: number;
   sod_new_count: number;
   lcbo_only_new_count: number;
   rep_only_new_count: number;
@@ -1102,12 +1116,16 @@ export interface NewListingsByRangePayload {
   window: { start: string; end: string; days: number };
   sku_filter: string | null;
   include_lcbo_cross_check: boolean;
+  /** When true (default), only stores with verified evidence are counted/returned. */
+  strict_mode?: boolean;
   summary: {
     total_new_listings: number;
     total_lost_listings: number;
     net_change: number;
     lcbo_confirmed_new: number;
     rep_confirmed_new: number;
+    total_confirmed_new?: number;
+    total_unconfirmed?: number;
   };
   per_sku: NewListingsPerSkuRow[];
   how_to_read: string;

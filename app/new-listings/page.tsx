@@ -31,15 +31,17 @@ export default function NewListingsPage() {
   const [end, setEnd] = useState(fmt(today));
   const [skuFilter, setSkuFilter] = useState<string>('');
   const [expandedSku, setExpandedSku] = useState<string | null>(null);
+  const [strictMode, setStrictMode] = useState(true);  // ON by default — only verified rows
 
   const audit = useQuery({
-    queryKey: ['new-listings-by-range', start, end, skuFilter],
+    queryKey: ['new-listings-by-range', start, end, skuFilter, strictMode],
     queryFn: () =>
       api.newListingsByRange({
         start,
         end,
         sku: skuFilter || undefined,
         include_lcbo: true,
+        strict_mode: strictMode,
       }),
     refetchInterval: 5 * 60_000, // every 5 min
   });
@@ -138,6 +140,34 @@ export default function NewListingsPage() {
               </select>
             </Field>
           </div>
+          <div className="rounded-lg border border-[var(--color-card-border)] p-3 bg-[rgba(255,255,255,0.02)]">
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={strictMode}
+                onChange={(e) => setStrictMode(e.target.checked)}
+                className="mt-0.5"
+              />
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold">Strict mode</span>{' '}
+                <span className="text-muted">(recommended)</span>
+                <div className="text-[10px] text-muted mt-0.5">
+                  Only count stores that have a verified NEW_LISTING/RELISTED
+                  event in the change log OR independent confirmation from
+                  lcbo.com / a rep. Filters out stores that appear in the
+                  snapshot diff but are likely just day-1 baseline gaps
+                  (already listed before our SOD ingest started).
+                </div>
+              </div>
+            </label>
+            {audit.data && (audit.data.summary.total_unconfirmed ?? 0) > 0 && (
+              <div className="mt-2 text-xs text-[var(--color-warning)]">
+                ⚠ With strict mode OFF, you&apos;d see{' '}
+                <strong>{audit.data.summary.total_unconfirmed}</strong>{' '}
+                additional rows the change log doesn&apos;t back up.
+              </div>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
@@ -153,11 +183,13 @@ export default function NewListingsPage() {
                 (process.env.NEXT_PUBLIC_API_BASE_URL ?? '') +
                 `/api/admin/new-listings-by-range?format=csv` +
                 `&start=${start}&end=${end}` +
-                (skuFilter ? `&sku=${skuFilter}` : '')
+                (skuFilter ? `&sku=${skuFilter}` : '') +
+                `&strict_mode=${strictMode ? '1' : '0'}`
               }
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[var(--color-accent)] text-[#2a1f0f] text-sm font-semibold"
+              title="Each row carries verification evidence — confirmed_new, has_change_event, last_listed_before_window, evidence text"
             >
               <Download size={14} /> Download CSV
             </a>
@@ -301,8 +333,18 @@ export default function NewListingsPage() {
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <div className="text-[10px] uppercase tracking-wider text-muted font-semibold">
-                                New stores ({r.new_stores.length})
+                              <div className="text-[10px] uppercase tracking-wider text-muted font-semibold flex items-center gap-2">
+                                <span>New stores ({r.new_stores.length})</span>
+                                {r.confirmed_new_count != null && r.unconfirmed_count != null && (
+                                  <span className="font-normal text-muted normal-case tracking-normal">
+                                    · {r.confirmed_new_count} confirmed
+                                    {r.unconfirmed_count > 0 && (
+                                      <span className="text-[var(--color-warning)]">
+                                        {' '}+ {r.unconfirmed_count} unconfirmed
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
                               </div>
                               <div className="flex flex-wrap gap-1">
                                 {r.new_stores.map((s) => (
@@ -310,17 +352,23 @@ export default function NewListingsPage() {
                                     key={`${s.store_number}-${s.discovered_via}`}
                                     href={`/stores/${s.store_number}`}
                                     className={`text-xs font-mono px-2 py-1 rounded inline-flex items-center gap-1 hover:bg-[var(--color-accent)] hover:text-[#2a1f0f] ${
-                                      s.discovered_via === 'lcbo_only'
-                                        ? 'bg-[rgba(239,75,75,0.12)] text-[var(--color-danger)]'
-                                        : s.discovered_via === 'rep_only'
-                                          ? 'bg-[rgba(120,200,140,0.12)] text-[var(--color-success)]'
-                                          : 'bg-[rgba(255,255,255,0.05)]'
+                                      !s.confirmed_new
+                                        ? 'bg-[rgba(255,255,255,0.03)] text-muted line-through opacity-60'
+                                        : s.discovered_via === 'lcbo_only'
+                                          ? 'bg-[rgba(239,75,75,0.12)] text-[var(--color-danger)]'
+                                          : s.discovered_via === 'rep_only'
+                                            ? 'bg-[rgba(120,200,140,0.12)] text-[var(--color-success)]'
+                                            : s.has_change_event
+                                              ? 'bg-[rgba(120,200,140,0.10)] text-[var(--color-success)]'
+                                              : 'bg-[rgba(255,255,255,0.05)]'
                                     }`}
-                                    title={`Discovered via: ${s.discovered_via}${s.lcbo_confirmed ? ' · lcbo confirmed' : ''}${s.rep_confirmed ? ' · rep confirmed' : ''}`}
+                                    title={s.evidence ?? `Discovered via: ${s.discovered_via}`}
                                   >
                                     #{s.store_number}
+                                    {s.has_change_event && <span title="NEW_LISTING event recorded">●</span>}
                                     {s.lcbo_confirmed && <span title="lcbo.com confirmed">✓</span>}
                                     {s.rep_confirmed && <Eye size={10} />}
+                                    {!s.confirmed_new && <span title="No transition event — likely baseline gap">⚠</span>}
                                   </Link>
                                 ))}
                               </div>
@@ -369,18 +417,22 @@ export default function NewListingsPage() {
       )}
 
       {/* Legend */}
-      <div className="text-xs text-muted flex flex-wrap gap-4">
+      <div className="text-xs text-muted flex flex-wrap gap-3">
         <span>
-          <span className="inline-block w-3 h-3 rounded bg-[rgba(255,255,255,0.05)] align-middle mr-1" />
-          SOD-detected
+          <span className="inline-block w-3 h-3 rounded bg-[rgba(120,200,140,0.10)] align-middle mr-1" />
+          ● Confirmed new — change event recorded
         </span>
         <span>
           <span className="inline-block w-3 h-3 rounded bg-[rgba(239,75,75,0.12)] align-middle mr-1" />
-          lcbo.com only (SOD missed)
+          lcbo.com only (commission claim)
         </span>
         <span>
           <span className="inline-block w-3 h-3 rounded bg-[rgba(120,200,140,0.12)] align-middle mr-1" />
           Rep observation only
+        </span>
+        <span>
+          <span className="inline-block w-3 h-3 rounded bg-[rgba(255,255,255,0.05)] align-middle mr-1" />
+          ⚠ Unconfirmed — likely baseline gap (hover for evidence)
         </span>
       </div>
     </div>
