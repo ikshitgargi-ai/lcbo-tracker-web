@@ -12,6 +12,7 @@ import {
   Database,
   Eye,
   Trash2,
+  Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -428,14 +429,24 @@ function SodCompareInner() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">
-                Per-SKU diff (from {result.from_filename || '?'} →{' '}
-                {result.to_source === 'uploaded' ? result.to_filename : 'DB latest'})
-              </CardTitle>
-              <CardDescription>
-                From dates: {result.from_dates_in_zip.join(', ') || '—'}.
-                To dates: {result.to_dates.join(', ') || '—'}.
-              </CardDescription>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-base">
+                    Per-SKU diff (from {result.from_filename || '?'} →{' '}
+                    {result.to_source === 'uploaded' ? result.to_filename : 'DB latest'})
+                  </CardTitle>
+                  <CardDescription>
+                    From dates: {result.from_dates_in_zip.join(', ') || '—'}.
+                    To dates: {result.to_dates.join(', ') || '—'}.
+                  </CardDescription>
+                </div>
+                <button
+                  onClick={() => downloadCompareCsv(result)}
+                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[var(--color-accent)] text-[#2a1f0f] text-sm font-semibold"
+                >
+                  <Download size={14} /> Download CSV
+                </button>
+              </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <table className="data-table min-w-full text-xs">
@@ -570,6 +581,68 @@ function SodCompareInner() {
       )}
     </div>
   );
+}
+
+/** Convert the compare result into a CSV and trigger a browser download. */
+function downloadCompareCsv(result: SodCompareUploadsPayload) {
+  const esc = (v: unknown) => {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines: string[] = [];
+  lines.push(
+    [
+      'from_filename', 'from_date', 'to_source', 'to_filename', 'to_date',
+      'sku', 'product_name', 'brand',
+      'verdict', 'store_number', 'discovered_via', 'lcbo_confirmed',
+      'sod_added_count', 'lcbo_only_added_count', 'union_added_count',
+      'sod_lost_count', 'net_change',
+    ].join(','),
+  );
+  for (const r of result.per_sku) {
+    for (const s of r.added_stores ?? []) {
+      lines.push([
+        result.from_filename, result.from_date_used ?? '',
+        result.to_source, result.to_filename, result.to_date_used ?? '',
+        r.sku, r.product_name, r.brand,
+        'ADDED', s.store_number, s.discovered_via, s.lcbo_confirmed,
+        r.sod_added_count, r.lcbo_only_added_count, r.union_added_count,
+        r.sod_lost_count, r.net_change,
+      ].map(esc).join(','));
+    }
+    for (const sn of r.lost_stores ?? []) {
+      lines.push([
+        result.from_filename, result.from_date_used ?? '',
+        result.to_source, result.to_filename, result.to_date_used ?? '',
+        r.sku, r.product_name, r.brand,
+        'LOST', sn, 'sod', '',
+        r.sod_added_count, r.lcbo_only_added_count, r.union_added_count,
+        r.sod_lost_count, r.net_change,
+      ].map(esc).join(','));
+    }
+    if ((r.added_stores?.length ?? 0) === 0 && (r.lost_stores?.length ?? 0) === 0) {
+      // SKU with no changes — emit one empty row so the SKU is represented
+      lines.push([
+        result.from_filename, result.from_date_used ?? '',
+        result.to_source, result.to_filename, result.to_date_used ?? '',
+        r.sku, r.product_name, r.brand,
+        'NO_CHANGE', '', '', '',
+        r.sod_added_count, r.lcbo_only_added_count, r.union_added_count,
+        r.sod_lost_count, r.net_change,
+      ].map(esc).join(','));
+    }
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const fromTag = (result.from_date_used ?? 'from').replace(/[^0-9-]/g, '');
+  const toTag = (result.to_date_used ?? result.to_source ?? 'to').replace(/[^0-9-]/g, '');
+  a.download = `anu-sod-compare-${fromTag || 'from'}-to-${toTag || 'today'}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function FileSlot({

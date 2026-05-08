@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { TrendingUp, Calendar, RefreshCw, Eye, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, Calendar, RefreshCw, Eye, AlertTriangle, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -138,15 +138,30 @@ export default function NewListingsPage() {
               </select>
             </Field>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => audit.refetch()}
-            disabled={audit.isFetching}
-          >
-            <RefreshCw size={14} className={audit.isFetching ? 'animate-spin' : ''} />
-            {audit.isFetching ? 'Computing…' : 'Re-run'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => audit.refetch()}
+              disabled={audit.isFetching}
+            >
+              <RefreshCw size={14} className={audit.isFetching ? 'animate-spin' : ''} />
+              {audit.isFetching ? 'Computing…' : 'Re-run'}
+            </Button>
+            <a
+              href={
+                (process.env.NEXT_PUBLIC_API_BASE_URL ?? '') +
+                `/api/admin/new-listings-by-range?format=csv` +
+                `&start=${start}&end=${end}` +
+                (skuFilter ? `&sku=${skuFilter}` : '')
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[var(--color-accent)] text-[#2a1f0f] text-sm font-semibold"
+            >
+              <Download size={14} /> Download CSV
+            </a>
+          </div>
         </CardContent>
       </Card>
 
