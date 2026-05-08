@@ -210,6 +210,20 @@ export const api = {
   sodHistoryCoverage: () =>
     request<SodHistoryCoveragePayload>('/api/admin/sod/history-coverage'),
 
+  // ===== SOD portal catalog (annual archives + options + informative) =====
+  sodPortalCatalog: () =>
+    request<SodPortalCatalogPayload>('/api/admin/sod/portal-catalog'),
+
+  sodImportFromPortal: (body: {
+    url: string;
+    keep_all_rows?: boolean;
+    only_dates?: string[];
+  }) =>
+    request<SodImportFromPortalPayload>('/api/admin/sod/import-from-portal', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
   sodRollbackSnapshot: (snapshot_date: string) =>
     request<SodRollbackPayload>('/api/admin/sod/rollback-snapshot', {
       method: 'POST',
@@ -1052,6 +1066,40 @@ export interface SodBulkUploadHistoricalPayload {
   total_inserted: number;
   total_skipped: number;
   per_file: SodBulkUploadHistoricalRow[];
+}
+
+export interface SodPortalFile {
+  url: string;
+  filename: string;
+  category_scope: string;
+  category_id: number;
+}
+
+export interface SodPortalCategory {
+  category_key: string;
+  category_label: string;
+  category_scope: string;
+  category_id: number;
+  file_count: number;
+  files: SodPortalFile[];
+}
+
+export interface SodPortalCatalogPayload {
+  as_of: string;
+  index_url_used: string | null;
+  agent_id: string | null;
+  categories: SodPortalCategory[];
+  how_to_use: string;
+}
+
+export interface SodImportFromPortalPayload {
+  status: string;
+  url: string;
+  dates_in_zip: string[];
+  tracked_rows: number;
+  inserted: number;
+  skipped_existing: number;
+  note: string;
 }
 
 export interface RepBehaviorPerRep {

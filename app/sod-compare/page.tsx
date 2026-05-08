@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
   GitCompare,
@@ -13,6 +13,10 @@ import {
   Eye,
   Trash2,
   Download,
+  Folder,
+  ChevronDown,
+  ChevronRight,
+  Cloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -360,6 +364,9 @@ function SodCompareInner() {
         </Card>
       )}
 
+      {/* Browse SOD portal — discover annual archives, options, informative */}
+      <PortalCatalogCard />
+
       {/* Bulk historical upload — drag many ZIPs at once */}
       <BulkHistoricalCard />
 
@@ -646,6 +653,162 @@ function downloadCompareCsv(result: SodCompareUploadsPayload) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * PortalCatalogCard — fetches the live SOD portal index and renders
+ * a navigable tree of every available file (Daily Inventory A/B,
+ * Informative 2025, Option 1/3/5 2025, etc). One click to import any.
+ */
+function PortalCatalogCard() {
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState<string | null>(null);
+
+  const catalog = useQuery({
+    queryKey: ['sod-portal-catalog'],
+    queryFn: () => api.sodPortalCatalog(),
+    enabled: false,  // explicit refresh
+    retry: false,
+  });
+
+  const importMut = useMutation({
+    mutationFn: (url: string) => api.sodImportFromPortal({ url }),
+    onMutate: (url) => setImporting(url),
+    onSettled: () => setImporting(null),
+    onSuccess: (r) => {
+      toast.success(
+        `Imported ${r.dates_in_zip.length} day(s): ${r.inserted.toLocaleString()} rows ` +
+        `(${r.skipped_existing.toLocaleString()} skipped, already in DB)`,
+        { duration: 10000 },
+      );
+    },
+    onError: (e: unknown) => toast.error((e as Error).message || 'Import failed'),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Cloud size={16} className="text-[var(--color-accent)]" />
+          Browse SOD portal — annual archives + options
+        </CardTitle>
+        <CardDescription>
+          Discover every file the supplier portal serves: Daily Inventory A/B
+          (already auto-pulled), <strong>Informative 2025</strong>, and the{' '}
+          <strong>Option 1/3/5 2025</strong> annual archives. The Option 5
+          archive in particular &quot;can be used for tracking over time&quot;
+          — one click to backfill our entire 2025 history.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => catalog.refetch()}
+          disabled={catalog.isFetching}
+        >
+          {catalog.isFetching ? (
+            <RefreshCw size={14} className="animate-spin" />
+          ) : (
+            <Folder size={14} />
+          )}
+          {catalog.isFetching ? 'Crawling portal…' : 'Discover available files'}
+        </Button>
+
+        {catalog.isError && (
+          <div className="text-xs text-[var(--color-danger)]">
+            {(catalog.error as Error).message}
+          </div>
+        )}
+
+        {catalog.data && (
+          <>
+            <div className="text-xs text-muted">
+              Portal index: <code className="font-mono">{catalog.data.index_url_used ?? '—'}</code>
+              {catalog.data.agent_id && (
+                <>
+                  {' '}· agent <code className="font-mono">{catalog.data.agent_id}</code>
+                </>
+              )}{' '}
+              · {catalog.data.categories.length} categories,{' '}
+              {catalog.data.categories.reduce((a, c) => a + c.file_count, 0)} files total
+            </div>
+
+            <div className="space-y-1.5">
+              {catalog.data.categories.map((cat) => {
+                const isOpen = openCats.has(cat.category_key);
+                return (
+                  <div
+                    key={cat.category_key}
+                    className="rounded-lg border border-[var(--color-card-border)] bg-[rgba(255,255,255,0.02)] overflow-hidden"
+                  >
+                    <button
+                      onClick={() => {
+                        const next = new Set(openCats);
+                        if (isOpen) next.delete(cat.category_key);
+                        else next.add(cat.category_key);
+                        setOpenCats(next);
+                      }}
+                      className="w-full px-3 py-2 flex items-center gap-2 text-left hover:bg-[rgba(255,255,255,0.03)]"
+                    >
+                      {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      <Folder size={14} className="text-[var(--color-accent)]" />
+                      <span className="text-sm font-semibold flex-1 min-w-0 truncate">
+                        {cat.category_label}
+                      </span>
+                      <span className="text-[10px] text-muted font-mono">
+                        {cat.category_scope}/{cat.category_id} · {cat.file_count} files
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-[var(--color-card-border)] bg-[rgba(0,0,0,0.15)] divide-y divide-[var(--color-card-border)]">
+                        {cat.files.map((f) => (
+                          <div
+                            key={f.url}
+                            className="px-3 py-1.5 flex items-center gap-2 text-xs"
+                          >
+                            <FileArchive size={12} className="text-muted shrink-0" />
+                            <span className="font-mono flex-1 min-w-0 truncate">
+                              {f.filename}
+                            </span>
+                            <a
+                              href={f.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted hover:text-[var(--color-accent)] text-[10px]"
+                              title="Download in browser"
+                            >
+                              <Download size={11} />
+                            </a>
+                            <button
+                              onClick={() => importMut.mutate(f.url)}
+                              disabled={importing === f.url}
+                              className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--color-accent)] text-[#2a1f0f] hover:opacity-80 disabled:opacity-50"
+                              title="Download via backend + ingest into sod_inventory"
+                            >
+                              {importing === f.url ? 'Importing…' : 'Import'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {catalog.data.categories.length === 0 && (
+              <div className="text-xs text-muted py-3">
+                No categories discovered. The portal layout may have changed —
+                or the agent may not have any active subscriptions. Manual
+                upload via the cards below still works.
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 /**
