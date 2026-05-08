@@ -166,6 +166,7 @@ export const api = {
     sku?: string;
     include_lcbo?: boolean;
     strict_mode?: boolean;
+    fresh_lcbo?: boolean;
   } = {}) => {
     const qs = new URLSearchParams();
     if (params.start) qs.set('start', params.start);
@@ -173,6 +174,7 @@ export const api = {
     if (params.sku) qs.set('sku', params.sku);
     if (params.include_lcbo === false) qs.set('include_lcbo', '0');
     if (params.strict_mode === false) qs.set('strict_mode', '0');
+    if (params.fresh_lcbo) qs.set('fresh_lcbo', '1');
     return request<NewListingsByRangePayload>(
       `/api/admin/new-listings-by-range?${qs.toString()}`,
     );
@@ -198,6 +200,15 @@ export const api = {
       method: 'POST',
       body: formData,
     }),
+
+  sodBulkUploadHistorical: (formData: FormData) =>
+    request<SodBulkUploadHistoricalPayload>('/api/admin/sod/bulk-upload-historical', {
+      method: 'POST',
+      body: formData,
+    }),
+
+  sodHistoryCoverage: () =>
+    request<SodHistoryCoveragePayload>('/api/admin/sod/history-coverage'),
 
   sodRollbackSnapshot: (snapshot_date: string) =>
     request<SodRollbackPayload>('/api/admin/sod/rollback-snapshot', {
@@ -1003,6 +1014,44 @@ export interface SodRollbackPayload {
   snapshot_date: string;
   deleted_rows: number;
   note: string;
+}
+
+export interface SodHistoryCoveragePerSku {
+  sku: string;
+  product_name: string;
+  brand: string;
+  earliest_date: string | null;
+  latest_date: string | null;
+  distinct_days_in_history: number;
+  gap_starts_first_30: string[];
+  error?: string;
+}
+
+export interface SodHistoryCoveragePayload {
+  as_of: string;
+  overall_earliest: string | null;
+  overall_latest: string | null;
+  overall_days: number;
+  per_sku: SodHistoryCoveragePerSku[];
+  how_to_read: string;
+}
+
+export interface SodBulkUploadHistoricalRow {
+  filename: string;
+  dates_in_zip?: string[];
+  tracked_rows?: number;
+  inserted?: number;
+  skipped_existing?: number;
+  note?: string;
+  error?: string;
+}
+
+export interface SodBulkUploadHistoricalPayload {
+  as_of: string;
+  files_processed: number;
+  total_inserted: number;
+  total_skipped: number;
+  per_file: SodBulkUploadHistoricalRow[];
 }
 
 export interface RepBehaviorPerRep {

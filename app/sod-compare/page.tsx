@@ -360,6 +360,9 @@ function SodCompareInner() {
         </Card>
       )}
 
+      {/* Bulk historical upload — drag many ZIPs at once */}
+      <BulkHistoricalCard />
+
       {/* Rollback panel — escape hatch when you upload the wrong file */}
       <Card>
         <CardHeader>
@@ -643,6 +646,162 @@ function downloadCompareCsv(result: SodCompareUploadsPayload) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * BulkHistoricalCard — drag many SOD ZIPs at once for bulk backfill.
+ * Each file is parsed + ingested independently. Per-file result table
+ * shows what got inserted vs skipped.
+ */
+function BulkHistoricalCard() {
+  const [files, setFiles] = useState<File[]>([]);
+  const [results, setResults] = useState<Awaited<ReturnType<typeof api.sodBulkUploadHistorical>> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const upload = useMutation({
+    mutationFn: () => {
+      const fd = new FormData();
+      files.forEach((f, i) => fd.append(`zip${i}`, f));
+      return api.sodBulkUploadHistorical(fd);
+    },
+    onSuccess: (r) => {
+      setResults(r);
+      toast.success(
+        `Bulk upload complete: ${r.files_processed} files, ${r.total_inserted.toLocaleString()} rows inserted`,
+        { duration: 10000 },
+      );
+    },
+    onError: (e: unknown) => toast.error((e as Error).message || 'Bulk upload failed'),
+  });
+
+  const totalSize = files.reduce((a, f) => a + f.size, 0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Database size={16} className="text-[var(--color-accent)]" />
+          Bulk backfill — multiple historical ZIPs
+        </CardTitle>
+        <CardDescription>
+          Drop or pick many SOD ZIPs at once. Each is ingested independently
+          via ON CONFLICT DO NOTHING — re-uploads are idempotent. Use this
+          if you have a folder of saved files (e.g. one per weekday for the
+          last several weeks) and want to fill our SOD history all at once.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".zip"
+          multiple
+          onChange={(e) => {
+            const list = e.target.files;
+            if (!list) return;
+            setFiles(Array.from(list));
+            setResults(null);
+          }}
+          className="hidden"
+        />
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => inputRef.current?.click()}
+            type="button"
+          >
+            <Upload size={14} />
+            Pick ZIPs
+          </Button>
+          {files.length > 0 ? (
+            <div className="text-xs text-muted">
+              <span className="font-mono">{files.length}</span> file{files.length === 1 ? '' : 's'} ·{' '}
+              <span className="font-mono">{(totalSize / (1024 * 1024)).toFixed(1)} MB</span> total
+              <button
+                onClick={() => setFiles([])}
+                className="text-[var(--color-danger)] hover:underline ml-3"
+              >
+                clear
+              </button>
+            </div>
+          ) : (
+            <span className="text-xs text-muted">No files selected (you can pick many at once)</span>
+          )}
+          <Button
+            onClick={() => upload.mutate()}
+            disabled={files.length === 0 || upload.isPending}
+          >
+            {upload.isPending ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <Database size={14} />
+            )}
+            {upload.isPending ? 'Ingesting…' : `Ingest ${files.length || 0} files`}
+          </Button>
+        </div>
+
+        {files.length > 0 && !results && (
+          <ul className="text-xs text-muted space-y-0.5 max-h-32 overflow-y-auto">
+            {files.map((f, i) => (
+              <li key={i} className="font-mono">
+                {f.name} <span className="text-[var(--color-muted)]">({(f.size / (1024 * 1024)).toFixed(1)} MB)</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {results && (
+          <div className="space-y-2 mt-2 pt-3 border-t border-[var(--color-card-border)]">
+            <div className="text-xs">
+              Total inserted:{' '}
+              <span className="font-semibold text-[var(--color-success)]">
+                {results.total_inserted.toLocaleString()}
+              </span>{' '}
+              · skipped (already in DB):{' '}
+              <span className="font-semibold text-muted">
+                {results.total_skipped.toLocaleString()}
+              </span>
+            </div>
+            <table className="data-table w-full text-xs">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Dates</th>
+                  <th>Tracked rows</th>
+                  <th>Inserted</th>
+                  <th>Skipped</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.per_file.map((r, i) => (
+                  <tr key={i}>
+                    <td className="font-mono">{r.filename}</td>
+                    <td className="font-mono">{(r.dates_in_zip ?? []).join(', ') || '—'}</td>
+                    <td className="tabular-nums">{r.tracked_rows ?? 0}</td>
+                    <td className="tabular-nums text-[var(--color-success)]">
+                      {(r.inserted ?? 0).toLocaleString()}
+                    </td>
+                    <td className="tabular-nums text-muted">
+                      {(r.skipped_existing ?? 0).toLocaleString()}
+                    </td>
+                    <td>
+                      {r.error ? (
+                        <span className="text-[var(--color-danger)]">{r.error}</span>
+                      ) : (
+                        <span className="text-[var(--color-success)]">✓ ok</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function FileSlot({

@@ -32,9 +32,10 @@ export default function NewListingsPage() {
   const [skuFilter, setSkuFilter] = useState<string>('');
   const [expandedSku, setExpandedSku] = useState<string | null>(null);
   const [strictMode, setStrictMode] = useState(true);  // ON by default — only verified rows
+  const [freshLcbo, setFreshLcbo] = useState(false);  // off by default — adds 30-60s when on
 
   const audit = useQuery({
-    queryKey: ['new-listings-by-range', start, end, skuFilter, strictMode],
+    queryKey: ['new-listings-by-range', start, end, skuFilter, strictMode, freshLcbo],
     queryFn: () =>
       api.newListingsByRange({
         start,
@@ -42,8 +43,15 @@ export default function NewListingsPage() {
         sku: skuFilter || undefined,
         include_lcbo: true,
         strict_mode: strictMode,
+        fresh_lcbo: freshLcbo,
       }),
     refetchInterval: 5 * 60_000, // every 5 min
+  });
+
+  const coverage = useQuery({
+    queryKey: ['sod-history-coverage'],
+    queryFn: () => api.sodHistoryCoverage(),
+    staleTime: 5 * 60_000,
   });
 
   const tracked = useQuery({
@@ -83,6 +91,31 @@ export default function NewListingsPage() {
           + rep observations so listings hidden from SOD still get caught.
         </p>
       </header>
+
+      {/* SOD history coverage banner — tells operator how far back they can
+          compare without uploading a historical ZIP. */}
+      {coverage.data?.overall_earliest && (
+        <div className="m-card flex items-start gap-3 border-[rgba(120,200,140,0.3)] bg-[rgba(120,200,140,0.04)]">
+          <Calendar size={16} className="text-[var(--color-success)] shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 text-xs">
+            <div className="font-semibold text-[var(--color-foreground)]">
+              SOD history coverage:{' '}
+              <span className="font-mono">{coverage.data.overall_earliest}</span> →{' '}
+              <span className="font-mono">{coverage.data.overall_latest}</span>{' '}
+              ({coverage.data.overall_days} days)
+            </div>
+            <div className="text-muted mt-0.5">
+              Diffs INSIDE this range work without any upload. For windows that
+              start before <strong>{coverage.data.overall_earliest}</strong>, upload a
+              historical SOD ZIP via{' '}
+              <Link href="/sod-compare" className="text-[var(--color-accent)] underline">
+                /sod-compare
+              </Link>{' '}
+              first.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Window controls */}
       <Card>
@@ -168,6 +201,28 @@ export default function NewListingsPage() {
               </div>
             )}
           </div>
+          {/* Fresh-lcbo toggle — kicks off live scrape before diff */}
+          <div className="rounded-lg border border-[var(--color-card-border)] p-3 bg-[rgba(255,255,255,0.02)]">
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={freshLcbo}
+                onChange={(e) => setFreshLcbo(e.target.checked)}
+                className="mt-0.5"
+              />
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold">Live lcbo.com cross-check</span>{' '}
+                <span className="text-[var(--color-warning)]">(adds 30-60 sec)</span>
+                <div className="text-[10px] text-muted mt-0.5">
+                  Run a fresh lcbo.com inventory scrape for all 8 tracked SKUs
+                  BEFORE the diff. Cross-check uses live-as-of-now data instead
+                  of the most recent 30-min cron&apos;s snapshot. Slower but
+                  produces the strongest possible verification when you&apos;re
+                  filing commission claims.
+                </div>
+              </div>
+            </label>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
@@ -184,7 +239,8 @@ export default function NewListingsPage() {
                 `/api/admin/new-listings-by-range?format=csv` +
                 `&start=${start}&end=${end}` +
                 (skuFilter ? `&sku=${skuFilter}` : '') +
-                `&strict_mode=${strictMode ? '1' : '0'}`
+                `&strict_mode=${strictMode ? '1' : '0'}` +
+                (freshLcbo ? '&fresh_lcbo=1' : '')
               }
               target="_blank"
               rel="noopener noreferrer"
