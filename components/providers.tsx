@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from 'sonner';
 import { useState } from 'react';
 import { ServiceWorkerRegister } from './sw-register';
+import { ErrorBoundary } from './error-boundary';
 
 /**
  * App-wide TanQuery client.
@@ -36,7 +37,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <ServiceWorkerRegister />
-      {children}
+      <ErrorBoundary>{children}</ErrorBoundary>
       <Toaster richColors position="top-right" theme="dark" />
       {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>

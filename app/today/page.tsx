@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { formatNumber, formatDate } from '@/lib/utils';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { MovementCard } from '@/components/movement-card';
+import { SystemStatusIndicator } from '@/components/system-status-indicator';
 
 // Hardcoded official roster — was reading api.reps which omits reps without
 // prior activity. Reps self-select; activeRep persists in localStorage.
@@ -33,9 +34,12 @@ export default function TodayPage() {
   return (
     <div className="space-y-4 pb-6">
       <header className="space-y-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Calendar size={16} className="text-[var(--color-accent)]" />
           <span className="muted-small font-semibold uppercase tracking-wider">{todayLabel}</span>
+          <span className="ml-auto">
+            <SystemStatusIndicator />
+          </span>
         </div>
         <h1>Today&apos;s Plan</h1>
         <p className="text-muted text-sm">

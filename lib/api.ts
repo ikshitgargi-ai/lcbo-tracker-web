@@ -211,6 +211,9 @@ export const api = {
     request<SodHistoryCoveragePayload>('/api/admin/sod/history-coverage'),
 
   // ===== SOD portal catalog (annual archives + options + informative) =====
+  // ===== System status (one-glance tier indicator) =====
+  systemStatus: () => request<SystemStatusPayload>('/api/admin/system-status'),
+
   sodPortalCatalog: () =>
     request<SodPortalCatalogPayload>('/api/admin/sod/portal-catalog'),
 
@@ -1066,6 +1069,20 @@ export interface SodBulkUploadHistoricalPayload {
   total_inserted: number;
   total_skipped: number;
   per_file: SodBulkUploadHistoricalRow[];
+}
+
+export interface SystemStatusPayload {
+  tier: 'ok' | 'degraded' | 'down';
+  issues: string[];
+  signals: {
+    sod_snapshot_age_days: number | null;
+    sod_last_run_age_hours: number | null;
+    lcbo_scrape_age_hours?: number | null;
+    last_activity_age_hours?: number | null;
+    sod_failed_runs_24h?: number;
+  };
+  sod_latest_snapshot: string | null;
+  as_of: string;
 }
 
 export interface SodPortalFile {
