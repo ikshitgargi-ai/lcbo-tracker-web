@@ -11,6 +11,7 @@ import {
   RefreshCw,
   ExternalLink,
   Sparkles,
+  CalendarDays,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -318,6 +319,9 @@ Return a markdown table sorted by total visits descending.`}
         </CardContent>
       </Card>
 
+      {/* Rep Activity Reports — daily/weekly/monthly downloadable logs */}
+      <RepActivityReportCard />
+
       {/* Quick links */}
       <Card>
         <CardHeader>
@@ -347,6 +351,245 @@ Return a markdown table sorted by total visits descending.`}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * RepActivityReportCard — pick a rep + period, preview the rollup, and
+ * one-click download the row-level CSV (the artifact you submit to NB
+ * Distillers or drop into ChatGPT).
+ */
+const REP_ROSTER = ['Ikshit', 'Namit', 'Virat', 'Surya', 'Neeraj'];
+const PERIOD_PRESETS: Array<{ key: string; label: string }> = [
+  { key: 'today', label: 'Today' },
+  { key: 'yesterday', label: 'Yesterday' },
+  { key: 'this_week', label: 'This week' },
+  { key: 'last_week', label: 'Last week' },
+  { key: 'this_month', label: 'This month' },
+  { key: 'last_month', label: 'Last month' },
+  { key: 'last_7d', label: 'Last 7d' },
+  { key: 'last_30d', label: 'Last 30d' },
+  { key: 'last_90d', label: 'Last 90d' },
+  { key: 'ytd', label: 'YTD' },
+];
+
+function RepActivityReportCard() {
+  const [rep, setRep] = useState<string>('');           // '' = all reps
+  const [period, setPeriod] = useState<string>('this_week');
+  const [start, setStart] = useState<string>('');
+  const [end, setEnd] = useState<string>('');
+  const useCustom = !!(start || end);
+
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+
+  const { data, isFetching, refetch } = useQuery({
+    queryKey: ['rep-activity-report', rep, period, start, end, useCustom],
+    queryFn: () =>
+      api.repActivityReport({
+        rep: rep || undefined,
+        period: useCustom ? undefined : period,
+        start: useCustom ? start || undefined : undefined,
+        end: useCustom ? end || undefined : undefined,
+      }),
+    staleTime: 30_000,
+    refetchInterval: 5 * 60_000,
+  });
+
+  // Build CSV download URL (mirror current state)
+  const csvParams = new URLSearchParams();
+  csvParams.set('format', 'csv');
+  if (rep) csvParams.set('rep', rep);
+  if (useCustom) {
+    if (start) csvParams.set('start', start);
+    if (end) csvParams.set('end', end);
+  } else {
+    csvParams.set('period', period);
+  }
+  const csvUrl = `${apiBase}/api/admin/rep-activity-report?${csvParams.toString()}`;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <CalendarDays size={16} className="text-[var(--color-accent)]" />
+          Rep Activity Reports
+        </CardTitle>
+        <CardDescription>
+          Daily / weekly / monthly activity log per rep — preview here, download
+          the row-level CSV for Excel pivots or AI analysis.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Rep">
+            <select value={rep} onChange={(e) => setRep(e.target.value)} className="select">
+              <option value="">All reps</option>
+              {REP_ROSTER.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Quick period">
+            <select
+              value={useCustom ? '' : period}
+              onChange={(e) => {
+                setPeriod(e.target.value);
+                setStart('');
+                setEnd('');
+              }}
+              className="select"
+              disabled={useCustom}
+            >
+              {PERIOD_PRESETS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Custom start (optional, overrides preset)">
+            <input
+              type="date"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className="select"
+            />
+          </Field>
+          <Field label="Custom end">
+            <input
+              type="date"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              className="select"
+              min={start}
+            />
+          </Field>
+        </div>
+
+        {/* Action bar */}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
+            {isFetching ? 'Loading…' : 'Re-run'}
+          </Button>
+          <a
+            href={csvUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[var(--color-accent)] text-[#2a1f0f] text-sm font-semibold"
+          >
+            <Download size={14} />
+            Download CSV
+          </a>
+          {(start || end) && (
+            <button
+              onClick={() => {
+                setStart('');
+                setEnd('');
+              }}
+              className="text-xs text-muted hover:text-[var(--color-foreground)] underline"
+            >
+              clear custom range
+            </button>
+          )}
+        </div>
+
+        {/* Window banner */}
+        {data?.window && (
+          <div className="text-[11px] text-muted">
+            Window: <span className="font-mono">{data.window.start}</span> →{' '}
+            <span className="font-mono">{data.window.end}</span> ({data.window.days}d) ·{' '}
+            <span className="font-semibold text-[var(--color-foreground)]">
+              {formatNumber(data.totals.rows)}
+            </span>{' '}
+            activities · {data.totals.unique_reps} rep
+            {data.totals.unique_reps === 1 ? '' : 's'} active ·{' '}
+            {data.totals.unique_active_days} active day
+            {data.totals.unique_active_days === 1 ? '' : 's'}
+          </div>
+        )}
+
+        {/* Per-rep summary table */}
+        {data?.per_rep_summary && data.per_rep_summary.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="data-table min-w-full text-xs">
+              <thead>
+                <tr>
+                  <th>Rep</th>
+                  <th>Visits</th>
+                  <th>Unique stores</th>
+                  <th>Repeat %</th>
+                  <th>Activity types</th>
+                  <th>First</th>
+                  <th>Last</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.per_rep_summary.map((s) => (
+                  <tr key={s.rep}>
+                    <td className="font-semibold">{s.rep}</td>
+                    <td className="tabular-nums">{s.visits}</td>
+                    <td className="tabular-nums">{s.unique_stores}</td>
+                    <td
+                      className="tabular-nums"
+                      style={{ color: s.repeat_visit_pct >= 50 ? 'var(--color-warning)' : undefined }}
+                    >
+                      {s.repeat_visit_pct}%
+                    </td>
+                    <td className="text-[11px]">
+                      {Object.entries(s.activity_types)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 4)
+                        .map(([k, v]) => `${k}:${v}`)
+                        .join(' · ')}
+                    </td>
+                    <td className="text-muted text-[10px]">{s.first_at?.slice(0, 16) ?? '—'}</td>
+                    <td className="text-muted text-[10px]">{s.last_at?.slice(0, 16) ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Daily rollup mini-bars */}
+        {data?.daily_rollup && data.daily_rollup.length > 0 && (
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1.5">
+              Visits per day
+            </div>
+            <div className="flex items-end gap-1 h-12">
+              {data.daily_rollup.map((d) => {
+                const max = Math.max(...data.daily_rollup.map((x) => x.visits)) || 1;
+                const h = Math.max((d.visits / max) * 100, 4);
+                return (
+                  <div
+                    key={d.date}
+                    title={`${d.date}: ${d.visits} visits`}
+                    className="flex-1 min-w-[6px] bg-[var(--color-accent)]/40 hover:bg-[var(--color-accent)] rounded-t"
+                    style={{ height: `${h}%` }}
+                  />
+                );
+              })}
+            </div>
+            <div className="text-[10px] text-muted mt-1 flex justify-between">
+              <span>{data.daily_rollup[0]?.date}</span>
+              <span>{data.daily_rollup[data.daily_rollup.length - 1]?.date}</span>
+            </div>
+          </div>
+        )}
+
+        {data && data.totals.rows === 0 && (
+          <div className="text-xs text-muted py-4 text-center">
+            No activities logged in this window
+            {rep ? ` for ${rep}` : ''}.
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

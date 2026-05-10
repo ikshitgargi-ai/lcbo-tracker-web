@@ -240,6 +240,23 @@ export const api = {
     return request<RepBehaviorPayload>(`/api/admin/rep-behavior?${qs.toString()}`);
   },
 
+  // ===== Rep activity reports (daily/weekly/monthly downloads) =====
+  repActivityReport: (params: {
+    rep?: string;
+    period?: string;
+    start?: string;
+    end?: string;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.rep) qs.set('rep', params.rep);
+    if (params.period) qs.set('period', params.period);
+    if (params.start) qs.set('start', params.start);
+    if (params.end) qs.set('end', params.end);
+    return request<RepActivityReportPayload>(
+      `/api/admin/rep-activity-report?${qs.toString()}`,
+    );
+  },
+
   // ===== Hidden listings detector (4-pattern audit) =====
   hiddenListings: (params: {
     sku?: string;
@@ -1148,6 +1165,48 @@ export interface RepBehaviorPayload {
   window_days: number;
   per_rep: RepBehaviorPerRep[];
   global_findings: string[];
+  how_to_read: string;
+}
+
+export interface RepActivityRow {
+  id: number;
+  created_at: string;
+  rep: string;
+  activity_type: string;
+  notes: string | null;
+  store_id: number | null;
+  store_number: number | null;
+  account: string | null;
+  address: string | null;
+  city: string | null;
+  postal: string | null;
+  priority: string | null;
+  store_rep: string | null;
+}
+
+export interface RepActivitySummaryRow {
+  rep: string;
+  visits: number;
+  unique_stores: number;
+  repeat_visit_pct: number;
+  activity_types: Record<string, number>;
+  first_at: string | null;
+  last_at: string | null;
+}
+
+export interface RepActivityReportPayload {
+  as_of: string;
+  window: { start: string; end: string; days: number; period_resolved_from: string };
+  rep_filter: string | null;
+  totals: {
+    rows: number;
+    unique_reps: number;
+    unique_active_days: number;
+    activity_type_counts: Record<string, number>;
+  };
+  per_rep_summary: RepActivitySummaryRow[];
+  daily_rollup: Array<{ date: string; visits: number }>;
+  rows: RepActivityRow[];
   how_to_read: string;
 }
 
