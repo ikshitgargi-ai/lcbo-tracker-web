@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ShieldAlert, Ghost, EyeOff, Activity, TrendingDown, RefreshCw, AlertTriangle } from 'lucide-react';
+import {
+  ShieldAlert, Ghost, EyeOff, Activity, TrendingDown,
+  RefreshCw, AlertTriangle, PackageOpen,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,11 +14,13 @@ import { formatNumber } from '@/lib/utils';
 import { PasscodeGate } from '@/components/passcode-gate';
 
 /**
- * Hidden Listings Detector — finds 4 patterns of sneaky disappearance:
+ * Hidden Listings Detector — finds 5 patterns of sneaky disappearance:
  *   1. GHOST listings (was Listed, vanished without DELISTED event)
  *   2. HIDDEN INVENTORY (lcbo.com sees stock, SOD says no)
  *   3. FLICKER (status flipped 3+ times in 30 days)
  *   4. MASS-DELIST (snapshot day with >10% drop in listings)
+ *   5. INVENTORY-NO-LISTING (SOD on_hand>0 but status is D/F) — the
+ *      "blank with stock" case where listings hide on the warehouse floor
  *
  * Passcode-gated (operator-only) — same passcode as commission audit.
  */
@@ -35,9 +40,15 @@ export default function HiddenListingsPage() {
 function HiddenListingsInner() {
   const [skuFilter, setSkuFilter] = useState<string>('');
   const [lookbackDays, setLookbackDays] = useState(90);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [minOnHand, setMinOnHand] = useState(1);
 
   const audit = useQuery({
-    queryKey: ['hidden-listings', skuFilter, lookbackDays],
+    queryKey: [
+      'hidden-listings', skuFilter, lookbackDays,
+      startDate, endDate, minOnHand,
+    ],
     queryFn: () =>
       api.hiddenListings({
         sku: skuFilter || undefined,
@@ -45,6 +56,9 @@ function HiddenListingsInner() {
         flicker_min: 3,
         mass_delist_pct: 10,
         lcbo_window_h: 72,
+        start: startDate || undefined,
+        end: endDate || undefined,
+        min_on_hand: minOnHand,
       }),
     refetchInterval: 5 * 60_000,
   });
@@ -73,7 +87,7 @@ function HiddenListingsInner() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-4">
+        <CardContent className="pt-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
             <Field label="SKU">
               <select
@@ -98,6 +112,7 @@ function HiddenListingsInner() {
                 value={lookbackDays}
                 onChange={(e) => setLookbackDays(Number(e.target.value))}
                 className="w-full"
+                disabled={!!(startDate && endDate)}
               />
             </Field>
             <Button
@@ -110,17 +125,60 @@ function HiddenListingsInner() {
               {audit.isFetching ? 'Auditing…' : 'Re-run audit'}
             </Button>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+            <Field label="Date range — start (overrides lookback)">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Date range — end">
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label={`Min on_hand for inventory-no-listing: ${minOnHand}`}>
+              <input
+                type="range"
+                min={1}
+                max={24}
+                step={1}
+                value={minOnHand}
+                onChange={(e) => setMinOnHand(Number(e.target.value))}
+                className="w-full"
+              />
+            </Field>
+          </div>
+          {(startDate || endDate) && (
+            <div className="text-[10px] text-muted">
+              Active window: {startDate || '…'} → {endDate || '…'} (overrides lookback)
+              {(startDate || endDate) && (
+                <button
+                  type="button"
+                  className="ml-2 underline text-[var(--color-accent)]"
+                  onClick={() => { setStartDate(''); setEndDate(''); }}
+                >
+                  clear
+                </button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <PatternCard
-          icon={<Ghost size={16} className="text-[var(--color-warning)]" />}
-          label="Ghost listings"
-          count={a?.summary.total_ghost ?? 0}
-          help="Listed in past, vanished without DELISTED event"
-          tone={(a?.summary.total_ghost ?? 0) > 0 ? 'warning' : undefined}
+          icon={<PackageOpen size={16} className="text-[var(--color-danger)]" />}
+          label="Inventory, no listing"
+          count={a?.summary.total_inventory_no_listing ?? 0}
+          help="SOD on_hand>0 but status is D/F — stock with no listing"
+          tone={(a?.summary.total_inventory_no_listing ?? 0) > 0 ? 'danger' : undefined}
         />
         <PatternCard
           icon={<EyeOff size={16} className="text-[var(--color-danger)]" />}
@@ -128,6 +186,13 @@ function HiddenListingsInner() {
           count={a?.summary.total_hidden_inventory ?? 0}
           help="lcbo.com sees stock, SOD says no — strongest evidence"
           tone={(a?.summary.total_hidden_inventory ?? 0) > 0 ? 'danger' : undefined}
+        />
+        <PatternCard
+          icon={<Ghost size={16} className="text-[var(--color-warning)]" />}
+          label="Ghost listings"
+          count={a?.summary.total_ghost ?? 0}
+          help="Listed in past, vanished without DELISTED event"
+          tone={(a?.summary.total_ghost ?? 0) > 0 ? 'warning' : undefined}
         />
         <PatternCard
           icon={<Activity size={16} className="text-[var(--color-warning)]" />}
@@ -145,7 +210,64 @@ function HiddenListingsInner() {
         />
       </div>
 
-      {/* Pattern 2: HIDDEN INVENTORY (most actionable, render first) */}
+      {/* Pattern 5: INVENTORY-NO-LISTING (the "blank with stock" case) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <PackageOpen size={16} className="text-[var(--color-danger)]" />
+            Inventory with no active listing
+            <span className="text-xs text-muted font-normal">
+              (SOD on_hand &gt; 0 but status is D/F — bottles on the floor, listing
+              gone — listings hide here)
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {(a?.patterns.inventory_no_listing?.length ?? 0) === 0 ? (
+            <Empty msg="No inventory-without-listing rows. SOD on_hand agrees with listing status across the window." />
+          ) : (
+            <table className="data-table min-w-full text-xs">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Product</th>
+                  <th>Store</th>
+                  <th>SOD status</th>
+                  <th>On hand</th>
+                  <th>Snapshot</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(a!.patterns.inventory_no_listing ?? []).map((r, i) => (
+                  <tr key={`${r.sku}-${r.store_number}-${r.snapshot_date}-${i}`}>
+                    <td className="font-mono">{r.sku}</td>
+                    <td>
+                      <span className="text-muted">{r.brand}</span> {r.product_name}
+                    </td>
+                    <td>
+                      <Link
+                        href={`/stores/${r.store_number}`}
+                        className="text-[var(--color-accent)] hover:underline"
+                      >
+                        #{r.store_number}
+                      </Link>
+                    </td>
+                    <td>
+                      <StatusBadge status={r.sod_status} />
+                    </td>
+                    <td className="tabular-nums font-semibold text-[var(--color-danger)]">
+                      {r.on_hand}
+                    </td>
+                    <td className="text-muted">{r.snapshot_date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pattern 2: HIDDEN INVENTORY (cross-validation with lcbo.com) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">

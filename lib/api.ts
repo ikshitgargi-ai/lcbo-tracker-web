@@ -257,13 +257,16 @@ export const api = {
     );
   },
 
-  // ===== Hidden listings detector (4-pattern audit) =====
+  // ===== Hidden listings detector (5-pattern audit) =====
   hiddenListings: (params: {
     sku?: string;
     lookback_days?: number;
     flicker_min?: number;
     mass_delist_pct?: number;
     lcbo_window_h?: number;
+    start?: string;          // YYYY-MM-DD — overrides lookback_days
+    end?: string;            // YYYY-MM-DD — overrides latest snapshot
+    min_on_hand?: number;    // floor for inventory_no_listing pattern
   } = {}) => {
     const qs = new URLSearchParams();
     if (params.sku) qs.set('sku', params.sku);
@@ -271,6 +274,9 @@ export const api = {
     if (params.flicker_min != null) qs.set('flicker_min', String(params.flicker_min));
     if (params.mass_delist_pct != null) qs.set('mass_delist_pct', String(params.mass_delist_pct));
     if (params.lcbo_window_h != null) qs.set('lcbo_window_h', String(params.lcbo_window_h));
+    if (params.start) qs.set('start', params.start);
+    if (params.end) qs.set('end', params.end);
+    if (params.min_on_hand != null) qs.set('min_on_hand', String(params.min_on_hand));
     return request<HiddenListingsPayload>(
       `/api/admin/hidden-listings?${qs.toString()}`,
     );
@@ -1261,6 +1267,18 @@ export interface HiddenListingMassDelist {
   evidence: string;
 }
 
+export interface HiddenListingInventoryNoListing {
+  sku: string;
+  product_name: string;
+  brand: string;
+  store_number: number;
+  snapshot_date: string;
+  sod_status: 'D' | 'F';
+  on_hand: number;
+  pattern: 'inventory_no_listing';
+  evidence: string;
+}
+
 export interface HiddenListingsPayload {
   as_of: string;
   params: {
@@ -1269,18 +1287,23 @@ export interface HiddenListingsPayload {
     mass_delist_pct: number;
     lcbo_window_h: number;
     sku_filter: string | null;
+    start?: string | null;
+    end?: string | null;
+    min_on_hand?: number;
   };
   summary: {
     total_ghost: number;
     total_hidden_inventory: number;
     total_flicker: number;
     total_mass_delist_events: number;
+    total_inventory_no_listing?: number;
   };
   patterns: {
     ghost_listings: HiddenListingGhost[];
     hidden_inventory: HiddenListingHidden[];
     flicker_patterns: HiddenListingFlicker[];
     mass_delist_days: HiddenListingMassDelist[];
+    inventory_no_listing?: HiddenListingInventoryNoListing[];
   };
   how_to_read: string;
 }
