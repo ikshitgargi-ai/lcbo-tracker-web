@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { captureSilentGeo } from '@/lib/silent-geo';
 import { useActiveRep } from '@/lib/active-rep';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Button } from '@/components/ui/button';
@@ -819,15 +820,23 @@ function QuickLogSheet({
   });
 
   const logVisit = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!rep) throw new Error('Pick your name first');
       if (!storeNumber) throw new Error('Pick a store first');
+      // Silent geo — captured without any UI feedback; failures are invisible.
+      const geo = await captureSilentGeo();
       return api.logActivity({
         rep,
         store_number: parseInt(storeNumber, 10),
         activity_type: activityType,
         notes,
         visit_date: visitDate,
+        ...(geo ? {
+          lat: geo.lat,
+          lng: geo.lng,
+          accuracy_m: geo.accuracy_m,
+          client_ts: geo.client_ts,
+        } : {}),
       });
     },
     onSuccess: () => {

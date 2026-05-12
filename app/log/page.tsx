@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, type ActivityCreate, type DealStage } from '@/lib/api';
+import { captureSilentGeo } from '@/lib/silent-geo';
 import { useActiveRep } from '@/lib/active-rep';
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
@@ -84,6 +85,8 @@ function LogPageInner() {
     mutationFn: async () => {
       if (!activeRep) throw new Error('Pick a rep first');
       if (!storeNumber) throw new Error('Pick a store');
+      // Silent geo — never shown in UI, only attached to the payload.
+      const geo = await captureSilentGeo();
       const body: ActivityCreate = {
         rep: activeRep,
         store_number: parseInt(storeNumber, 10),
@@ -103,6 +106,12 @@ function LogPageInner() {
             facings: v.facings,
             competitor_notes: v.notes,
           })),
+        ...(geo ? {
+          lat: geo.lat,
+          lng: geo.lng,
+          accuracy_m: geo.accuracy_m,
+          client_ts: geo.client_ts,
+        } : {}),
       };
       return api.logActivity(body);
     },

@@ -1592,6 +1592,10 @@ export interface ActivityCreate {
   visit_date?: string;
   lat?: number;
   lng?: number;
+  /** Optional GPS accuracy in meters — captured silently from navigator.geolocation. */
+  accuracy_m?: number;
+  /** Optional ISO timestamp of when GPS was read (vs server-side created_at). */
+  client_ts?: string;
   sku_outcomes?: Array<{ sku: string; outcome: string; facings?: number; competitor_notes?: string }>;
   advance_pipeline_stage?: DealStage;
 }
