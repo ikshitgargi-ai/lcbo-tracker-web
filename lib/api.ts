@@ -13,16 +13,21 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? 'https://lcbo-tracker.onrender.com';
 
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? '';
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // For FormData (multipart) bodies, let the browser set Content-Type
   // automatically — including the boundary parameter. Manually setting
   // 'application/json' would break the upload.
   const isFormData =
     typeof FormData !== 'undefined' && init?.body instanceof FormData;
+  const authHeaders: Record<string, string> = {};
+  if (API_KEY) authHeaders['X-API-Key'] = API_KEY;
   const headers = isFormData
-    ? init?.headers
+    ? { ...authHeaders, ...(init?.headers ?? {}) }
     : {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...(init?.headers ?? {}),
       };
   const r = await fetch(`${API_BASE}${path}`, {
