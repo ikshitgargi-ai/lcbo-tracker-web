@@ -1,13 +1,17 @@
 'use client';
 
+import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Globe2 } from 'lucide-react';
+import { Globe2, ChevronDown, ChevronRight, Users, Eye, AlertTriangle, PackageOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber } from '@/lib/utils';
 
 export default function TerritoriesPage() {
   const territories = useQuery({ queryKey: ['territories'], queryFn: api.crmTerritories });
+  const rollup = useQuery({ queryKey: ['territory-rollup'], queryFn: api.territoryRollup });
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const grouped = (territories.data ?? []).reduce<Record<string, typeof territories.data>>(
     (acc, t) => {
@@ -26,8 +30,117 @@ export default function TerritoriesPage() {
           Territories
         </h1>
         <p className="text-sm text-[var(--color-muted)]">
-          Ontario LCBO stores grouped by FSA postal-code prefix. 10 territories + unassigned.
+          Per-rep distribution + SKU drill-down on the latest SOD snapshot.
+          Tap a rep card to expand the SKU breakdown.
         </p>
+      </header>
+
+      {/* Per-rep rollup: distribution + SKU drilldown */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users size={16} className="text-[var(--color-accent)]" />
+            Per-rep distribution
+            {rollup.data?.snapshot_date && (
+              <span className="text-xs text-muted font-normal">
+                snapshot {rollup.data.snapshot_date}
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {rollup.isLoading && <div className="skeleton h-24" />}
+          {rollup.data?.territories.map((t) => {
+            const open = expanded === t.rep;
+            return (
+              <div
+                key={t.rep}
+                className="rounded-lg border border-[var(--color-card-border)] bg-[rgba(255,255,255,0.02)] overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpanded(open ? null : t.rep)}
+                  className="w-full text-left p-3 flex items-center justify-between gap-3 hover:bg-[var(--color-card)]"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      <span className="font-semibold">{t.rep}</span>
+                      <span className="text-xs text-muted">— {t.territory_name}</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2 text-xs">
+                      <Metric label="Stores" value={t.stores_total} />
+                      <Metric
+                        label="Visited 30d"
+                        value={`${t.stores_visited_30d} (${t.visited_pct}%)`}
+                      />
+                      <Metric
+                        label="Coverage"
+                        value={`${t.coverage_pct}%`}
+                        accent={t.coverage_pct < 50 ? 'warning' : undefined}
+                      />
+                      <Metric
+                        label="Avg SKU dist"
+                        value={`${t.sku_distribution_avg_pct}%`}
+                      />
+                    </div>
+                  </div>
+                </button>
+                {open && (
+                  <div className="px-3 pb-3 border-t border-[var(--color-card-border)]">
+                    <table className="data-table min-w-full text-xs mt-2">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Listed</th>
+                          <th>Missing</th>
+                          <th><AlertTriangle size={10} className="inline" /> OOS</th>
+                          <th><PackageOpen size={10} className="inline" /> Low</th>
+                          <th>Dist %</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {t.per_sku.map((s) => (
+                          <tr key={s.sku}>
+                            <td>
+                              <Link
+                                href={`/skus/${s.sku}`}
+                                className="hover:text-[var(--color-accent)]"
+                              >
+                                <span className="text-muted">{s.brand}</span>{' '}
+                                {s.product_name}
+                              </Link>
+                            </td>
+                            <td className="tabular-nums">{s.present_stores}</td>
+                            <td className="tabular-nums text-[var(--color-warning)]">
+                              {s.missing_stores}
+                            </td>
+                            <td className="tabular-nums text-[var(--color-danger)]">
+                              {s.oos_stores}
+                            </td>
+                            <td className="tabular-nums text-[var(--color-warning)]">
+                              {s.low_stock_stores}
+                            </td>
+                            <td className="tabular-nums font-semibold">
+                              {s.distribution_pct}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Geo-coded territory blocks (existing) */}
+      <header className="pt-2">
+        <h2 className="text-lg font-semibold text-[var(--color-muted)] uppercase text-xs tracking-widest">
+          Geo-coded territory definitions
+        </h2>
       </header>
 
       {Object.entries(grouped).map(([region, terrs]) => (
@@ -81,6 +194,27 @@ export default function TerritoriesPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function Metric({
+  label, value, accent,
+}: {
+  label: string;
+  value: number | string;
+  accent?: 'warning' | 'danger';
+}) {
+  const color =
+    accent === 'danger' ? 'var(--color-danger)' :
+    accent === 'warning' ? 'var(--color-warning)' :
+    'var(--color-foreground)';
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-muted">{label}</div>
+      <div className="font-semibold tabular-nums" style={{ color }}>
+        {value}
+      </div>
     </div>
   );
 }

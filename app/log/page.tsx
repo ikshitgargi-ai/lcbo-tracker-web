@@ -14,6 +14,7 @@ import {
   Sparkles,
   Users,
   ClipboardCheck,
+  Truck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, type ActivityCreate, type DealStage } from '@/lib/api';
@@ -30,6 +31,7 @@ const ACTIVITY_TYPES = [
   { key: 'tasting', label: 'Tasting', icon: Coffee },
   { key: 'meeting', label: 'Meeting', icon: Users },
   { key: 'order_commitment', label: 'Order Commitment', icon: ClipboardCheck },
+  { key: 'delivery', label: 'Delivery', icon: Truck },
   { key: 'sample_drop', label: 'Sample Drop', icon: Box },
   { key: 'call', label: 'Call', icon: Phone },
   { key: 'email', label: 'Email', icon: Mail },

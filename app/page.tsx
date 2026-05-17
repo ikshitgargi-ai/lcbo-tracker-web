@@ -795,7 +795,7 @@ function QuickLogSheet({
   const [storeNumber, setStoreNumber] = useState('');
   const [sku, setSku] = useState(trackedSkus[0]?.sku ?? '');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [activityType, setActivityType] = useState<'store_visit' | 'tasting' | 'meeting' | 'order_commitment' | 'sample_drop' | 'call' | 'email'>('store_visit');
+  const [activityType, setActivityType] = useState<'store_visit' | 'tasting' | 'meeting' | 'order_commitment' | 'delivery' | 'sample_drop' | 'call' | 'email'>('store_visit');
   const [notes, setNotes] = useState('');
   const [visitDate, setVisitDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -974,6 +974,7 @@ function QuickLogSheet({
                   <option value="tasting">Tasting</option>
                   <option value="meeting">Meeting</option>
                   <option value="order_commitment">Order Commitment</option>
+                  <option value="delivery">Delivery</option>
                   <option value="sample_drop">Sample Drop</option>
                   <option value="call">Call</option>
                   <option value="email">Email</option>

@@ -405,6 +405,25 @@ export const api = {
       `/api/crm/resolve-store?q=${encodeURIComponent(q)}&limit=${limit}`,
     ),
 
+  // Rep self-service dashboard — drives /me. One call returns this rep's
+  // stats, recent activities, new listings, opportunities, my OOS/low.
+  repDashboard: (rep: string) =>
+    request<RepDashboardPayload>(
+      `/api/crm/rep-dashboard/${encodeURIComponent(rep)}`,
+    ),
+
+  // Territory rollup — per-rep distribution + per-SKU drilldown.
+  // Powers /territories: pick a rep, see which SKUs are underdistributed.
+  territoryRollup: () =>
+    request<TerritoryRollupPayload>(`/api/crm/territory-rollup`),
+
+  // Morning digest — OOS + listed-but-low-stock (< 7 by default).
+  // Same payload that is rendered to HTML and emailed by the cron.
+  morningDigest: (threshold = 7) =>
+    request<MorningDigestPayload>(
+      `/api/crm/morning-digest?threshold=${threshold}`,
+    ),
+
   // Per-rep performance scoreboard
   repPerformance: (days = 30) =>
     request<RepPerformancePayload>(`/api/crm/rep-performance?days=${days}`),
@@ -1872,6 +1891,141 @@ export interface RepPerformanceRow {
   last_activity_type: string | null;
   tasting_to_listing_rate_pct: number | null;
 }
+export interface RepDashboardStats {
+  total: number;
+  visits: number;
+  tastings: number;
+  meetings: number;
+  order_commitments: number;
+  deliveries: number;
+  outreach: number;
+  sample_drops: number;
+}
+
+export interface RepDashboardActivity {
+  id: number;
+  activity_type: string;
+  notes: string;
+  created_at: string;
+  store_number: number | null;
+  account: string;
+  city: string;
+  outcome: string;
+}
+
+export interface RepDashboardListing {
+  id: number;
+  sku: string;
+  brand: string;
+  product_name: string;
+  closed_at: string;
+  store_number: number | null;
+}
+
+export interface RepDashboardDeal {
+  id: number;
+  sku: string;
+  brand: string;
+  product_name: string;
+  stage: string;
+  store_number: number | null;
+  next_action: string;
+  next_action_date: string;
+}
+
+export interface RepDashboardOpportunity {
+  sku: string;
+  brand: string;
+  product_name: string;
+  present_stores: number;
+  missing_stores: number;
+  opportunity_pct: number;
+}
+
+export interface RepDashboardStockRow {
+  sku: string;
+  product_name: string;
+  store_number: number;
+  on_hand: number;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  rep: string;
+}
+
+export interface RepDashboardPayload {
+  rep: string;
+  as_of: string;
+  my_store_count: number;
+  stats_30d: RepDashboardStats;
+  stats_90d: RepDashboardStats;
+  recent_activities: RepDashboardActivity[];
+  new_listings_won: RepDashboardListing[];
+  open_deals: RepDashboardDeal[];
+  opportunities: RepDashboardOpportunity[];
+  my_oos: RepDashboardStockRow[];
+  my_low_stock: RepDashboardStockRow[];
+}
+
+export interface TerritoryRollupSku {
+  sku: string;
+  brand: string;
+  product_name: string;
+  present_stores: number;
+  missing_stores: number;
+  oos_stores: number;
+  low_stock_stores: number;
+  distribution_pct: number;
+}
+
+export interface TerritoryRollupRep {
+  rep: string;
+  territory_name: string;
+  stores_total: number;
+  stores_visited_30d: number;
+  visited_pct: number;
+  stores_carrying_any_sku: number;
+  coverage_pct: number;
+  sku_distribution_avg_pct: number;
+  per_sku: TerritoryRollupSku[];
+}
+
+export interface TerritoryRollupPayload {
+  as_of: string;
+  snapshot_date: string | null;
+  territories: TerritoryRollupRep[];
+}
+
+export interface MorningDigestRow {
+  sku: string;
+  product_name: string;
+  store_number: number;
+  on_hand: number;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  rep: string;
+}
+
+export interface MorningDigestPayload {
+  as_of: string;
+  snapshot_date: string | null;
+  low_threshold: number;
+  portfolio: string;
+  buckets: {
+    oos: MorningDigestRow[];
+    low_stock: MorningDigestRow[];
+  };
+  summary: {
+    total_oos: number;
+    total_low_stock: number;
+    oos_units_short: number;
+    low_stock_total_units: number;
+  };
+}
+
 export interface RepPerformancePayload {
   window_days: number;
   since: string;

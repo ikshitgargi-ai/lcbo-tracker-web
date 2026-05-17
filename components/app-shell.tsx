@@ -51,6 +51,7 @@ const NAV = [
   { href: '/anu-import', label: 'Anu Import', icon: Tag },
   { href: '/route-planner', label: 'Route Planner', icon: Navigation },
   { href: '/log', label: 'Log Visit', icon: Plus },
+  { href: '/me', label: 'My Dashboard', icon: Trophy },
   { href: '/new-listings', label: 'New Listings (date range)', icon: TrendingUp },
   { href: '/tastings', label: 'Tastings (Book + Calendar)', icon: Calendar },
   { href: '/follow-ups', label: 'Tasting Follow-ups', icon: AlertTriangle },
