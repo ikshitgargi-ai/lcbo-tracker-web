@@ -58,9 +58,9 @@ export default function MePage() {
               className="select w-full"
             >
               <option value="">— pick rep —</option>
-              {(repsQuery.data?.reps ?? []).map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.name}
+              {(repsQuery.data ?? []).map((r) => (
+                <option key={r.rep} value={r.rep}>
+                  {r.rep} {r.store_count > 0 ? `(${r.store_count} stores)` : ''}
                 </option>
               ))}
             </select>
