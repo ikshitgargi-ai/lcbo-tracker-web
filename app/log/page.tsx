@@ -12,6 +12,8 @@ import {
   Box,
   Eye,
   Sparkles,
+  Users,
+  ClipboardCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, type ActivityCreate, type DealStage } from '@/lib/api';
@@ -26,6 +28,8 @@ import { StoreLookup } from '@/components/store-lookup';
 const ACTIVITY_TYPES = [
   { key: 'store_visit', label: 'Store Visit', icon: Eye },
   { key: 'tasting', label: 'Tasting', icon: Coffee },
+  { key: 'meeting', label: 'Meeting', icon: Users },
+  { key: 'order_commitment', label: 'Order Commitment', icon: ClipboardCheck },
   { key: 'sample_drop', label: 'Sample Drop', icon: Box },
   { key: 'call', label: 'Call', icon: Phone },
   { key: 'email', label: 'Email', icon: Mail },

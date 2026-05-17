@@ -279,6 +279,47 @@ export default function StorePage({
             </div>
           )}
 
+          {/* Missing opportunities — tracked SKUs NOT at this store */}
+          {inv.data?.missing_skus && inv.data.missing_skus.length > 0 && (
+            <div className="m-card border-[rgba(253,203,110,0.3)] bg-[rgba(253,203,110,0.04)]">
+              <div className="flex items-start gap-3">
+                <Target size={18} className="text-[var(--color-warning)] shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold">
+                    Missing opportunities ({inv.data.missing_skus.length})
+                  </div>
+                  <div className="text-xs text-muted mt-0.5">
+                    These tracked SKUs are NOT at this store right now — distribution
+                    gaps to pitch.
+                  </div>
+                  <div className="mt-2.5 space-y-1">
+                    {inv.data.missing_skus.map((m) => (
+                      <div
+                        key={m.sku}
+                        className="flex items-center justify-between gap-2 p-2 rounded bg-[var(--color-background)] border border-[var(--color-card-border)] text-xs"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            href={`/skus/${m.sku}`}
+                            className="font-medium hover:text-[var(--color-accent)]"
+                          >
+                            {m.product_name}
+                          </Link>
+                          <div className="text-muted">
+                            {m.brand} · <span className="font-mono">{m.sku}</span>
+                          </div>
+                        </div>
+                        <span className="change-chip change-NEW_LISTING text-[10px]">
+                          gap
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* "I saw it on shelf" — catches SOD undercounts so we get paid for
               every actual listing. Submitted observations feed the
               /commission-audit reconciliation. */}
@@ -562,6 +603,8 @@ function ContactCard({
     phone?: string;
     rep?: string;
     priority?: string;
+    spirits_ambassador?: string;
+    store_notes?: string;
   };
   onSaved: () => void;
 }) {
@@ -574,6 +617,8 @@ function ContactCard({
     phone: initial.phone ?? '',
     rep: initial.rep ?? '',
     priority: initial.priority ?? '',
+    spirits_ambassador: initial.spirits_ambassador ?? '',
+    store_notes: initial.store_notes ?? '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -599,7 +644,9 @@ function ContactCard({
       form.store_email ||
       form.phone ||
       form.rep ||
-      form.priority;
+      form.priority ||
+      form.spirits_ambassador ||
+      form.store_notes;
     return (
       <div className="text-xs pt-2 border-t border-[var(--color-card-border)] flex items-start gap-2">
         <div className="flex-1 min-w-0 space-y-0.5 text-muted">
@@ -610,12 +657,24 @@ function ContactCard({
             </div>
           )}
           {form.asst_manager_name && <div>Asst: {form.asst_manager_name}</div>}
+          {form.spirits_ambassador && (
+            <div>
+              Spirits Ambassador:{' '}
+              <span className="text-[var(--color-foreground)]">{form.spirits_ambassador}</span>
+            </div>
+          )}
           {form.phone && !form.manager_phone && <div>Phone: {form.phone}</div>}
           {form.store_email && <div>Email: {form.store_email}</div>}
           {form.rep && <div>Rep: {form.rep}</div>}
+          {form.store_notes && (
+            <div className="mt-1.5 p-2 rounded bg-[var(--color-background)] border border-[var(--color-card-border)] whitespace-pre-wrap text-[var(--color-foreground)]">
+              {form.store_notes}
+            </div>
+          )}
           {!hasAny && (
             <div className="italic text-[var(--color-warning)]">
-              No contact info on file — tap Edit to add manager / phone / email
+              No contact info on file — tap Edit to add manager / spirits ambassador / phone /
+              notes
             </div>
           )}
         </div>
@@ -668,6 +727,14 @@ function ContactCard({
           onChange={(e) => setForm({ ...form, store_email: e.target.value })}
           className="select col-span-2"
         />
+        <input
+          type="text"
+          placeholder="Spirits Ambassador name"
+          value={form.spirits_ambassador}
+          onChange={(e) => setForm({ ...form, spirits_ambassador: e.target.value })}
+          className="select col-span-2"
+          maxLength={120}
+        />
         <select
           value={form.rep}
           onChange={(e) => setForm({ ...form, rep: e.target.value })}
@@ -690,6 +757,14 @@ function ContactCard({
           <option value="B">B — Strong</option>
           <option value="C">C — Standard</option>
         </select>
+        <textarea
+          placeholder="Store notes (planograms, restocking schedule, manager preferences, etc.)"
+          value={form.store_notes}
+          onChange={(e) => setForm({ ...form, store_notes: e.target.value })}
+          className="select col-span-2 min-h-[68px]"
+          maxLength={2000}
+          rows={3}
+        />
       </div>
       <div className="flex gap-2">
         <button

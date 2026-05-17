@@ -382,18 +382,28 @@ export const api = {
     request<StoreFullPayload>(`/api/crm/store/${storeNumber}/full`),
   storeSearch: (q: string) =>
     request<StoreSearchPayload>(`/api/crm/store-search?q=${encodeURIComponent(q)}`),
-  // Update editable store fields (manager name, phone, email, rep, priority).
-  // Reps fill these in during visits so the directory grows over time.
+  // Update editable store fields (manager name, phone, email, rep, priority,
+  // spirits ambassador, store notes). Reps fill these in during visits so
+  // the directory grows richer over time.
   updateStore: (storeId: number, fields: Partial<{
     account: string; address: string; city: string; postal: string;
     phone: string; email: string; rep: string; priority: string;
     manager_name: string; asst_manager_name: string;
     manager_phone: string; store_email: string; contacts: string; producer: string;
+    spirits_ambassador: string; store_notes: string;
   }>) =>
     request<{ success: boolean }>(`/api/stores/${storeId}`, {
       method: 'PUT',
       body: JSON.stringify(fields),
     }),
+
+  // Smart store resolver — rep types address OR store# (or postal/account/city)
+  // and we return ranked matches with confidence scores. Used by the
+  // StoreSearch input on /log and the homepage QuickLog.
+  resolveStore: (q: string, limit = 8) =>
+    request<ResolveStorePayload>(
+      `/api/crm/resolve-store?q=${encodeURIComponent(q)}&limit=${limit}`,
+    ),
 
   // Per-rep performance scoreboard
   repPerformance: (days = 30) =>
@@ -823,6 +833,13 @@ export interface StoreInventory {
     on_hand: number;
     snapshot_date: string;
     brand: string;
+  }>;
+  /** Tracked SKUs NOT present at this store — missed merchandising opportunities. */
+  missing_skus?: Array<{
+    sku: string;
+    brand: string;
+    product_name: string;
+    pattern: 'missing_opportunity';
   }>;
   live: Array<{
     sku: string;
@@ -1747,8 +1764,40 @@ export interface StoreFullPayload {
     territory_code: string;
     territory_name: string;
     territory_color: string;
+    spirits_ambassador: string;
+    store_notes: string;
   };
   snapshot_date: string | null;
+}
+
+export interface ResolveStoreMatch {
+  id: number;
+  store_number: number;
+  account: string;
+  address: string;
+  city: string;
+  postal: string;
+  rep: string;
+  priority: string;
+  lat: number;
+  lng: number;
+  confidence: number;
+  match_reason: string;
+}
+
+export interface ResolveStorePayload {
+  query: string;
+  count: number;
+  matches: ResolveStoreMatch[];
+  how_to_read?: string;
+  error?: string;
+}
+
+export interface MissingSkuRow {
+  sku: string;
+  brand: string;
+  product_name: string;
+  pattern: 'missing_opportunity';
 }
 
 export interface StoreSearchMatch {
