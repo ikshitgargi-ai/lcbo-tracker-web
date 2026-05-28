@@ -410,23 +410,33 @@ export const api = {
       `/api/crm/resolve-store?q=${encodeURIComponent(q)}&limit=${limit}`,
     ),
 
+  // Portfolio discovery — NB Distillers vs Anu Imports SKU split.
+  // Drives the portfolio toggle so reps can flip view between books.
+  portfolios: () =>
+    request<{ portfolios: Array<{ key: string; label: string; sku_count: number;
+              skus: Array<{ sku: string; brand: string; product_name: string }> }>;
+              default: string }>(`/api/sod/portfolios`),
+
   // Rep self-service dashboard — drives /me. One call returns this rep's
   // stats, recent activities, new listings, opportunities, my OOS/low.
-  repDashboard: (rep: string) =>
+  // portfolio: 'NB' (default — rep team is NB-focused) | 'Anu' | 'all'.
+  repDashboard: (rep: string, portfolio: 'NB' | 'Anu' | 'all' = 'NB') =>
     request<RepDashboardPayload>(
-      `/api/crm/rep-dashboard/${encodeURIComponent(rep)}`,
+      `/api/crm/rep-dashboard/${encodeURIComponent(rep)}?portfolio=${portfolio}`,
     ),
 
   // Territory rollup — per-rep distribution + per-SKU drilldown.
   // Powers /territories: pick a rep, see which SKUs are underdistributed.
-  territoryRollup: () =>
-    request<TerritoryRollupPayload>(`/api/crm/territory-rollup`),
+  territoryRollup: (portfolio: 'NB' | 'Anu' | 'all' = 'NB') =>
+    request<TerritoryRollupPayload>(
+      `/api/crm/territory-rollup?portfolio=${portfolio}`,
+    ),
 
   // Morning digest — OOS + listed-but-low-stock (< 7 by default).
   // Same payload that is rendered to HTML and emailed by the cron.
-  morningDigest: (threshold = 7) =>
+  morningDigest: (threshold = 7, portfolio: 'NB' | 'Anu' | 'all' = 'NB') =>
     request<MorningDigestPayload>(
-      `/api/crm/morning-digest?threshold=${threshold}`,
+      `/api/crm/morning-digest?threshold=${threshold}&portfolio=${portfolio}`,
     ),
 
   // Per-rep performance scoreboard

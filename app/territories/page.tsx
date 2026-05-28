@@ -5,12 +5,17 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Globe2, ChevronDown, ChevronRight, Users, Eye, AlertTriangle, PackageOpen } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useActivePortfolio } from '@/lib/active-portfolio';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber } from '@/lib/utils';
 
 export default function TerritoriesPage() {
+  const [portfolio, setPortfolio] = useActivePortfolio();
   const territories = useQuery({ queryKey: ['territories'], queryFn: api.crmTerritories });
-  const rollup = useQuery({ queryKey: ['territory-rollup'], queryFn: api.territoryRollup });
+  const rollup = useQuery({
+    queryKey: ['territory-rollup', portfolio],
+    queryFn: () => api.territoryRollup(portfolio),
+  });
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const grouped = (territories.data ?? []).reduce<Record<string, typeof territories.data>>(
@@ -24,15 +29,37 @@ export default function TerritoriesPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl sm:text-3xl font-semibold flex items-center gap-2">
-          <Globe2 size={24} className="text-[var(--color-accent)]" />
-          Territories
-        </h1>
-        <p className="text-sm text-[var(--color-muted)]">
-          Per-rep distribution + SKU drill-down on the latest SOD snapshot.
-          Tap a rep card to expand the SKU breakdown.
-        </p>
+      <header className="space-y-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold flex items-center gap-2">
+            <Globe2 size={24} className="text-[var(--color-accent)]" />
+            Territories
+            <span className="text-xs font-normal text-muted ml-2">
+              ({portfolio === 'NB' ? 'NB Distillers' : portfolio === 'Anu' ? 'Anu Imports' : 'All portfolios'})
+            </span>
+          </h1>
+          <p className="text-sm text-[var(--color-muted)]">
+            Per-rep distribution + SKU drill-down on the latest SOD snapshot.
+            Tap a rep card to expand the SKU breakdown.
+          </p>
+        </div>
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-muted mr-1">Portfolio:</span>
+          {(['NB', 'Anu', 'all'] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPortfolio(p)}
+              className={`px-3 py-1 rounded-md font-semibold ${
+                portfolio === p
+                  ? 'bg-[var(--color-accent)] text-[#2a1f0f]'
+                  : 'bg-[var(--color-card)] border border-[var(--color-card-border)]'
+              }`}
+            >
+              {p === 'NB' ? 'NB Distillers' : p === 'Anu' ? 'Anu Imports' : 'All'}
+            </button>
+          ))}
+        </div>
       </header>
 
       {/* Per-rep rollup: distribution + SKU drilldown */}

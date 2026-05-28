@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useActiveRep } from '@/lib/active-rep';
+import { useActivePortfolio, type Portfolio } from '@/lib/active-portfolio';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber, relativeTime, statusBadgeClass, statusLabel } from '@/lib/utils';
 
@@ -32,11 +33,12 @@ import { formatNumber, relativeTime, statusBadgeClass, statusLabel } from '@/lib
  */
 export default function MePage() {
   const [activeRep, setActiveRep] = useActiveRep();
+  const [portfolio, setPortfolio] = useActivePortfolio();
 
   const repsQuery = useQuery({ queryKey: ['reps'], queryFn: api.reps });
   const dash = useQuery({
-    queryKey: ['rep-dashboard', activeRep],
-    queryFn: () => api.repDashboard(activeRep ?? ''),
+    queryKey: ['rep-dashboard', activeRep, portfolio],
+    queryFn: () => api.repDashboard(activeRep ?? '', portfolio),
     enabled: !!activeRep,
   });
 
@@ -77,24 +79,47 @@ export default function MePage() {
   return (
     <div className="space-y-5 pb-24">
       {/* Header */}
-      <header className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold flex items-center gap-2">
-            <UserIcon size={24} className="text-[var(--color-accent)]" />
-            {activeRep} — My Dashboard
-          </h1>
-          <p className="text-sm text-muted">
-            {d?.my_store_count ?? '—'} assigned stores · last refreshed{' '}
-            {d?.as_of ? relativeTime(d.as_of) : '—'}
-          </p>
+      <header className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-semibold flex items-center gap-2">
+              <UserIcon size={24} className="text-[var(--color-accent)]" />
+              {activeRep} — My Dashboard
+            </h1>
+            <p className="text-sm text-muted">
+              {d?.my_store_count ?? '—'} assigned stores · {' '}
+              <span className="font-semibold">
+                Portfolio: {portfolio === 'NB' ? 'NB Distillers' : portfolio === 'Anu' ? 'Anu Imports' : 'All books'}
+              </span>{' '}
+              · last refreshed {d?.as_of ? relativeTime(d.as_of) : '—'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveRep(null)}
+            className="text-xs text-[var(--color-accent)] underline"
+          >
+            switch rep
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setActiveRep(null)}
-          className="text-xs text-[var(--color-accent)] underline"
-        >
-          switch rep
-        </button>
+        {/* Portfolio toggle — NB by default for the rep team */}
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-muted mr-1">View:</span>
+          {(['NB', 'Anu', 'all'] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPortfolio(p)}
+              className={`px-3 py-1 rounded-md font-semibold transition-colors ${
+                portfolio === p
+                  ? 'bg-[var(--color-accent)] text-[#2a1f0f]'
+                  : 'bg-[var(--color-card)] border border-[var(--color-card-border)]'
+              }`}
+            >
+              {p === 'NB' ? 'NB Distillers' : p === 'Anu' ? 'Anu Imports' : 'All'}
+            </button>
+          ))}
+        </div>
       </header>
 
       {dash.isLoading && <div className="skeleton h-48" />}
