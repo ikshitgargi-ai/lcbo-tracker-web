@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useActiveRep } from '@/lib/active-rep';
-import { useActivePortfolio, type Portfolio } from '@/lib/active-portfolio';
+import { useActivePortfolio } from '@/lib/active-portfolio';
+import { PortfolioToggle } from '@/components/portfolio-toggle';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber, relativeTime, statusBadgeClass, statusLabel } from '@/lib/utils';
 
@@ -33,7 +34,7 @@ import { formatNumber, relativeTime, statusBadgeClass, statusLabel } from '@/lib
  */
 export default function MePage() {
   const [activeRep, setActiveRep] = useActiveRep();
-  const [portfolio, setPortfolio] = useActivePortfolio();
+  const [portfolio] = useActivePortfolio();
 
   const repsQuery = useQuery({ queryKey: ['reps'], queryFn: api.reps });
   const dash = useQuery({
@@ -102,24 +103,9 @@ export default function MePage() {
             switch rep
           </button>
         </div>
-        {/* Portfolio toggle — NB by default for the rep team */}
-        <div className="flex items-center gap-1 text-xs">
-          <span className="text-muted mr-1">View:</span>
-          {(['NB', 'Anu', 'all'] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPortfolio(p)}
-              className={`px-3 py-1 rounded-md font-semibold transition-colors ${
-                portfolio === p
-                  ? 'bg-[var(--color-accent)] text-[#2a1f0f]'
-                  : 'bg-[var(--color-card)] border border-[var(--color-card-border)]'
-              }`}
-            >
-              {p === 'NB' ? 'NB Distillers' : p === 'Anu' ? 'Anu Imports' : 'All'}
-            </button>
-          ))}
-        </div>
+        {/* Portfolio toggle — NB by default for the rep team.
+            Anu/All hidden behind passcode (operator-only). */}
+        <PortfolioToggle />
       </header>
 
       {dash.isLoading && <div className="skeleton h-48" />}

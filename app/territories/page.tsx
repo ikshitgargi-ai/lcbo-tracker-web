@@ -6,11 +6,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Globe2, ChevronDown, ChevronRight, Users, Eye, AlertTriangle, PackageOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useActivePortfolio } from '@/lib/active-portfolio';
+import { PortfolioToggle } from '@/components/portfolio-toggle';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber } from '@/lib/utils';
 
 export default function TerritoriesPage() {
-  const [portfolio, setPortfolio] = useActivePortfolio();
+  const [portfolio] = useActivePortfolio();
   const territories = useQuery({ queryKey: ['territories'], queryFn: api.crmTerritories });
   const rollup = useQuery({
     queryKey: ['territory-rollup', portfolio],
@@ -43,23 +44,7 @@ export default function TerritoriesPage() {
             Tap a rep card to expand the SKU breakdown.
           </p>
         </div>
-        <div className="flex items-center gap-1 text-xs">
-          <span className="text-muted mr-1">Portfolio:</span>
-          {(['NB', 'Anu', 'all'] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPortfolio(p)}
-              className={`px-3 py-1 rounded-md font-semibold ${
-                portfolio === p
-                  ? 'bg-[var(--color-accent)] text-[#2a1f0f]'
-                  : 'bg-[var(--color-card)] border border-[var(--color-card-border)]'
-              }`}
-            >
-              {p === 'NB' ? 'NB Distillers' : p === 'Anu' ? 'Anu Imports' : 'All'}
-            </button>
-          ))}
-        </div>
+        <PortfolioToggle />
       </header>
 
       {/* Per-rep rollup: distribution + SKU drilldown */}
