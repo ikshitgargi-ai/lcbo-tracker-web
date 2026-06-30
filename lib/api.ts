@@ -491,6 +491,32 @@ export const api = {
   replaceTargets: (storeNumber: number | string, perCat = 5) =>
     request<ReplaceTargetsPayload>(`/api/crm/store/${storeNumber}/replace-targets?per_cat=${perCat}`),
 
+  // ===== Forecasting v0 + Rep Coach v0 =====
+  crmForecast: (params: {
+    portfolio?: string;
+    sku?: string;
+    rep?: string;
+    flag?: string;
+    include_green?: boolean;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.portfolio) qs.set('portfolio', params.portfolio);
+    if (params.sku) qs.set('sku', params.sku);
+    if (params.rep) qs.set('rep', params.rep);
+    if (params.flag) qs.set('flag', params.flag);
+    if (params.include_green) qs.set('include_green', '1');
+    const s = qs.toString();
+    return request<ForecastPayload>(`/api/crm/forecast${s ? `?${s}` : ''}`);
+  },
+  storeForecast: (storeNumber: number | string, portfolio?: string) =>
+    request<StoreForecastPayload>(
+      `/api/crm/store/${storeNumber}/forecast${portfolio ? `?portfolio=${portfolio}` : ''}`,
+    ),
+  storeCoach: (storeNumber: number | string, portfolio?: string) =>
+    request<StoreCoachPayload>(
+      `/api/crm/store/${storeNumber}/coach${portfolio ? `?portfolio=${portfolio}` : ''}`,
+    ),
+
   // ===== Sprint 4: Brand drill-down + distribution additions =====
   brands: () => request<BrandsPayload>('/api/crm/brands'),
   brand: (brand: string) =>
@@ -2157,6 +2183,90 @@ export interface ReplaceTargetsPayload {
   store_number: number;
   snapshot_date: string | null;
   categories: ReplaceCategory[];
+}
+
+// ===== Forecasting v0 + Rep Coach v0 types =====
+
+/** RED = stockout now/imminent · YELLOW = below reorder pace ·
+ *  STALL = stock sitting, not selling · NEW = thin history · GREEN = healthy ·
+ *  DROPPED = no longer in this store's feed (store-level endpoint only) */
+export type ForecastFlag = 'RED' | 'YELLOW' | 'STALL' | 'NEW' | 'GREEN' | 'DROPPED';
+
+export interface ForecastRowBase {
+  sku: string;
+  brand: string;
+  product_name: string;
+  on_hand: number;
+  status: string;
+  /** 4-week moving average of depletions, units/week */
+  weekly_ma: number;
+  depleted_4w: number;
+  restocked_4w: number;
+  span_days: number;
+  days_cover: number | null;
+  flag: ForecastFlag;
+  reason: string;
+  last_snapshot: string;
+}
+
+export interface ForecastRow extends ForecastRowBase {
+  store_number: number;
+  account: string;
+  city: string;
+  rep: string;
+  priority: string;
+}
+
+export interface ForecastSkuSummary {
+  sku: string;
+  brand: string;
+  product_name: string;
+  red: number;
+  yellow: number;
+  stall: number;
+  new: number;
+  green: number;
+  stores_listed: number;
+  network_weekly_ma: number;
+}
+
+export interface ForecastPayload {
+  window_days: number;
+  red_days: number;
+  yellow_days: number;
+  anchor_date: string | null;
+  portfolio: string;
+  counts: Record<string, number>;
+  by_sku: ForecastSkuSummary[];
+  rows: ForecastRow[];
+  freshness: Freshness;
+}
+
+export interface StoreForecastPayload {
+  store_number: number;
+  window_days: number;
+  rows: ForecastRowBase[];
+  freshness: Freshness;
+}
+
+export interface CoachBullet {
+  tag: string;
+  flag: string;
+  sku: string | null;
+  brand?: string;
+  product_name?: string;
+  text: string;
+  /** The data behind the bullet — every number is checkable */
+  why: string;
+}
+
+export interface StoreCoachPayload {
+  store_number: number;
+  account: string;
+  portfolio: string;
+  bullets: CoachBullet[];
+  generated_at: string;
+  freshness: Freshness;
 }
 
 // Sprint 4 types

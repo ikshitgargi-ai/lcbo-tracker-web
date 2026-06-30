@@ -15,10 +15,12 @@ import {
   Target,
   Zap,
   Eye,
+  Lightbulb,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, type DealStage } from '@/lib/api';
+import { api, type DealStage, type CoachBullet, type ForecastRowBase } from '@/lib/api';
 import { useActiveRep } from '@/lib/active-rep';
+import { useActivePortfolio } from '@/lib/active-portfolio';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,11 +34,22 @@ export default function StorePage({
   const { storeNumber } = use(params);
   const n = Number(storeNumber);
   const [activeRep] = useActiveRep();
+  const [portfolio] = useActivePortfolio();
   const qc = useQueryClient();
   const [tab, setTab] = useState<'overview' | 'replace' | 'activity' | 'deals'>('overview');
 
   const full = useQuery({ queryKey: ['store-full', n], queryFn: () => api.storeFull(n) });
   const inv = useQuery({ queryKey: ['store-inv', n], queryFn: () => api.storeInventory(n) });
+  const coach = useQuery({
+    queryKey: ['store-coach', n, portfolio],
+    queryFn: () => api.storeCoach(n, portfolio),
+  });
+  const forecast = useQuery({
+    queryKey: ['store-forecast', n, portfolio],
+    queryFn: () => api.storeForecast(n, portfolio),
+  });
+  const forecastBySku: Record<string, ForecastRowBase> = {};
+  for (const r of forecast.data?.rows ?? []) forecastBySku[r.sku] = r;
   const replace = useQuery({
     queryKey: ['replace-targets', n],
     queryFn: () => api.replaceTargets(n),
@@ -204,6 +217,24 @@ export default function StorePage({
 
       <FreshnessBanner />
 
+      {/* Rep Coach v0 — 3 bullets: what to pitch here this week */}
+      {coach.isLoading && <div className="skeleton h-28" />}
+      {coach.data && coach.data.bullets.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Lightbulb size={16} className="text-[var(--color-accent)]" />
+              This week&apos;s pitch
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2.5">
+            {coach.data.bullets.map((b, i) => (
+              <CoachBulletRow key={i} bullet={b} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tab strip */}
       <div className="flex gap-1.5 overflow-x-auto -mx-4 px-4 pb-1">
         {(
@@ -249,30 +280,42 @@ export default function StorePage({
         <div className="space-y-2.5">
           {inv.isLoading &&
             Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-16" />)}
-          {inv.data?.sod.map((s) => (
-            <div key={s.sku} className="m-card">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/skus/${s.sku}`}
-                    className="font-medium hover:text-[var(--color-accent)]"
-                  >
-                    {s.product_name}
-                  </Link>
-                  <div className="text-xs text-muted">
-                    {s.brand} · <span className="font-mono">{s.sku}</span>
+          {inv.data?.sod.map((s) => {
+            const fc = forecastBySku[s.sku];
+            return (
+              <div key={s.sku} className="m-card">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={`/skus/${s.sku}`}
+                      className="font-medium hover:text-[var(--color-accent)]"
+                    >
+                      {s.product_name}
+                    </Link>
+                    <div className="text-xs text-muted">
+                      {s.brand} · <span className="font-mono">{s.sku}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={statusBadgeClass(s.status)}>{statusLabel(s.status)}</span>
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase tracking-wider text-muted">on-hand</div>
+                      <div className="font-bold tabular-nums">{formatNumber(s.on_hand)}</div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={statusBadgeClass(s.status)}>{statusLabel(s.status)}</span>
-                  <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-wider text-muted">on-hand</div>
-                    <div className="font-bold tabular-nums">{formatNumber(s.on_hand)}</div>
+                {fc && fc.flag !== 'DROPPED' && (
+                  <div className="mt-2 pt-2 border-t border-[var(--color-card-border)] flex items-center gap-2 flex-wrap text-xs">
+                    <ForecastFlagChip flag={fc.flag} />
+                    <span className="text-muted">
+                      {fc.weekly_ma > 0 ? `selling ${fc.weekly_ma}/wk` : 'no movement (4 wks)'}
+                      {fc.days_cover != null && fc.days_cover > 0 && ` · ~${Math.round(fc.days_cover)}d cover`}
+                    </span>
                   </div>
-                </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           {inv.data?.sod.length === 0 && (
             <div className="m-card text-center text-muted py-6">
               None of our tracked SKUs are at this store right now.
@@ -586,6 +629,57 @@ export default function StorePage({
         </div>
       )}
     </div>
+  );
+}
+
+const COACH_TAG_STYLE: Record<string, { color: string; background: string }> = {
+  OOS: { color: 'var(--color-danger)', background: 'rgba(239,75,75,0.15)' },
+  REORDER: { color: 'var(--color-danger)', background: 'rgba(239,75,75,0.12)' },
+  ACTIVATE: { color: 'var(--color-warning)', background: 'rgba(253,203,110,0.15)' },
+  PITCH: { color: 'var(--color-success)', background: 'rgba(76,175,125,0.15)' },
+  PIPELINE: { color: 'var(--color-accent)', background: 'rgba(212,165,116,0.15)' },
+  'FOLLOW-UP': { color: 'var(--color-warning)', background: 'rgba(253,203,110,0.12)' },
+  RELATIONSHIP: { color: 'var(--color-muted)', background: 'rgba(255,255,255,0.06)' },
+  LOG: { color: 'var(--color-muted)', background: 'rgba(255,255,255,0.06)' },
+};
+
+function CoachBulletRow({ bullet }: { bullet: CoachBullet }) {
+  const style = COACH_TAG_STYLE[bullet.tag] ?? COACH_TAG_STYLE.RELATIONSHIP;
+  const body = (
+    <div className="flex items-start gap-2.5">
+      <span className="change-chip shrink-0 mt-0.5" style={style}>
+        {bullet.tag}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm leading-snug">{bullet.text}</div>
+        <div className="text-[11px] text-muted mt-0.5">{bullet.why}</div>
+      </div>
+    </div>
+  );
+  if (bullet.sku) {
+    return (
+      <Link href={`/skus/${bullet.sku}`} className="block hover:opacity-80">
+        {body}
+      </Link>
+    );
+  }
+  return body;
+}
+
+export function ForecastFlagChip({ flag }: { flag: string }) {
+  const map: Record<string, { color: string; background: string; label: string }> = {
+    RED: { color: 'var(--color-danger)', background: 'rgba(239,75,75,0.15)', label: 'RED — reorder now' },
+    YELLOW: { color: 'var(--color-warning)', background: 'rgba(253,203,110,0.15)', label: 'YELLOW — below reorder pace' },
+    STALL: { color: 'var(--color-muted)', background: 'rgba(255,255,255,0.08)', label: 'STALL — not moving' },
+    NEW: { color: 'var(--color-accent)', background: 'rgba(212,165,116,0.15)', label: 'NEW — thin history' },
+    GREEN: { color: 'var(--color-success)', background: 'rgba(76,175,125,0.12)', label: 'Healthy' },
+  };
+  const s = map[flag];
+  if (!s) return null;
+  return (
+    <span className="change-chip" style={{ color: s.color, background: s.background }}>
+      {s.label}
+    </span>
   );
 }
 

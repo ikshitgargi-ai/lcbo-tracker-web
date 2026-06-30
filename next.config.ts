@@ -15,7 +15,12 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://lcbo-tracker.onrender.com https://lcbo.anu-spirits.com",
+      // Dev builds also allow a local Flask backend (see .env.local /
+      // NEXT_PUBLIC_API_BASE); production CSP stays locked to Render + Anu.
+      "connect-src 'self' https://lcbo-tracker.onrender.com https://lcbo.anu-spirits.com" +
+        (process.env.NODE_ENV !== 'production'
+          ? ' http://localhost:5050 http://127.0.0.1:5050'
+          : ''),
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -26,6 +31,18 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
+  },
+  // Dev-only: proxy API calls to a local Flask backend so the app can run
+  // fully offline against local data. Engaged by setting
+  // NEXT_PUBLIC_API_BASE= (empty) in .env.local → same-origin /api/* calls
+  // land here and get forwarded. Production returns no rewrites.
+  async rewrites() {
+    if (process.env.NODE_ENV === 'production') return [];
+    const target = process.env.LOCAL_API_PROXY || 'http://localhost:5050';
+    return [
+      { source: '/api/:path*', destination: `${target}/api/:path*` },
+      { source: '/healthz', destination: `${target}/healthz` },
+    ];
   },
   poweredByHeader: false,
 };

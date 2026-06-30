@@ -50,6 +50,7 @@ const NAV = [
   { href: '/nb', label: 'NB Distillers ★', icon: Trophy },
   { href: '/anu-import', label: 'Anu Import', icon: Tag },
   { href: '/route-planner', label: 'Route Planner', icon: Navigation },
+  { href: '/forecast', label: 'Stockout Forecast', icon: TrendingUp },
   { href: '/log', label: 'Log Visit', icon: Plus },
   { href: '/me', label: 'My Dashboard', icon: Trophy },
   { href: '/new-listings', label: 'New Listings (date range)', icon: TrendingUp },
