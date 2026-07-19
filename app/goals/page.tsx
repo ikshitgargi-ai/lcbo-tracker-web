@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Flag } from 'lucide-react';
 import { api } from '@/lib/api';
+import { PROGRESS_RAMP } from '@/lib/chart-colors';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber, formatDate } from '@/lib/utils';
@@ -109,14 +110,14 @@ function ProgressBar({
   }
   const color =
     pct >= 100
-      ? 'var(--color-success)'
+      ? PROGRESS_RAMP.done
       : pct >= 75
-        ? '#a3d977'
+        ? PROGRESS_RAMP.strong
         : pct >= 50
-          ? 'var(--color-warning)'
+          ? PROGRESS_RAMP.caution
           : pct >= 25
-            ? '#e17055'
-            : 'var(--color-danger)';
+            ? PROGRESS_RAMP.behind
+            : PROGRESS_RAMP.critical;
   const clamped = Math.max(0, Math.min(100, pct));
   return (
     <div className="flex items-center gap-2">

@@ -30,7 +30,7 @@ export default function AnuImportPage() {
     <div className="space-y-4 pb-6">
       <header className="space-y-1">
         <div className="flex items-center gap-2">
-          <Wine size={16} className="text-[#a78bfa]" />
+          <Wine size={16} className="text-[var(--color-data)]" />
           <span className="muted-small font-semibold uppercase tracking-wider">
             Secondary portfolio
           </span>
@@ -78,7 +78,7 @@ export default function AnuImportPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {t?.per_sku.map((p) => (
-              <div key={p.sku} className="m-card border-[#a78bfa]/30">
+              <div key={p.sku} className="m-card border-[rgba(64,142,255,0.3)]">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
                     <div className="text-xs text-muted">{p.brand}</div>

@@ -61,7 +61,7 @@ const NAV = [
   { href: '/ask', label: 'Ask AI', icon: Sparkles },
 ];
 
-// Secondary — only visible if explicitly opened (drawer "More" section)
+// Secondary: only visible if explicitly opened (drawer "More" section)
 const NAV_SECONDARY = [
   { href: '/exports', label: 'Exports & Rep Audit ★', icon: Download },
   { href: '/commission-audit', label: 'Commission Audit ★', icon: DollarSign },
@@ -121,14 +121,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-brand-grad">
-      {/* Always-on global search (Cmd+K) — renders the trigger inline + the modal portal-style */}
+      {/* Always-on global search (Cmd+K), renders the trigger inline + the modal portal-style */}
       <CommandBar />
 
       {/* Mobile top bar */}
-      <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 border-b border-[var(--color-card-border)] bg-[rgba(10,12,16,0.8)] backdrop-blur safe-top">
+      <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-14 border-b border-[var(--color-card-border)] bg-[rgba(6,12,24,0.8)] backdrop-blur safe-top">
         <Link href="/" className="flex items-center gap-2">
           <Logo />
-          <span className="font-semibold">Anu LCBO</span>
+          <span className="[font-family:var(--font-display)] text-lg font-semibold text-[var(--color-cream)]">
+            <span className="text-[var(--color-primary)]">Anu</span> LCBO
+          </span>
         </Link>
         <button
           aria-label="Open menu"
@@ -149,12 +151,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between px-4 h-14 border-b border-[var(--color-card-border)]">
               <div className="flex items-center gap-2">
                 <Logo />
-                <span className="font-semibold">Anu LCBO</span>
+                <span className="[font-family:var(--font-display)] text-lg font-semibold text-[var(--color-cream)]">
+                  <span className="text-[var(--color-primary)]">Anu</span> LCBO
+                </span>
               </div>
               <button
                 aria-label="Close menu"
                 onClick={() => setOpen(false)}
-                className="h-11 w-11 flex items-center justify-center rounded-lg hover:bg-[#1a1f29]"
+                className="h-11 w-11 flex items-center justify-center rounded-lg hover:bg-[var(--color-hover)]"
               >
                 <X size={20} />
               </button>
@@ -175,14 +179,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-[var(--color-card-border)] bg-[rgba(18,21,27,0.8)] backdrop-blur safe-top">
-        <div className="flex items-center gap-3 px-5 h-16 border-b border-[var(--color-card-border)]">
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-[var(--color-card-border)] bg-[rgba(11,20,36,0.8)] backdrop-blur safe-top">
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[var(--color-card-border)]">
           <Logo />
           <div>
-            <div className="text-sm font-semibold">Anu Spirits</div>
-            <div className="text-[10px] text-[var(--color-muted)] uppercase tracking-wider">
-              LCBO Tracker Pro
+            <div className="[font-family:var(--font-display)] text-lg leading-tight font-semibold tracking-[-0.022em] text-[var(--color-cream)]">
+              <span className="text-[var(--color-primary)]">ANU</span> SPIRITS
             </div>
+            <div className="anu-label text-[10px]">LCBO Tracker</div>
+            <div className="mt-1.5 h-[2px] w-6 bg-[var(--color-gold-dim)]" />
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -197,12 +202,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="p-4 text-[10px] text-[var(--color-muted)] border-t border-[var(--color-card-border)]">
-          Anu Spirits · Tracker Pro
+          Anu Spirits · LCBO Tracker
         </div>
       </aside>
 
-      {/* Mobile bottom tab bar — always visible. Anchor tabs scroll instead of navigating. */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[rgba(10,12,16,0.96)] backdrop-blur border-t border-[var(--color-card-border)] safe-bottom">
+      {/* Mobile bottom tab bar, always visible. Anchor tabs scroll instead of navigating. */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[rgba(6,12,24,0.96)] backdrop-blur border-t border-[var(--color-card-border)] safe-bottom">
         <div className="flex items-stretch justify-around">
           {NAV.slice(0, 5).map((item) => {
             const Icon = item.icon;
@@ -230,7 +235,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={handleClick}
                 className={cn(
                   'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px]',
-                  active ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]',
+                  active ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted)]',
                 )}
               >
                 <Icon size={20} />
@@ -241,10 +246,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      {/* Main content — with bottom padding for mobile tab bar */}
+      {/* Main content, with bottom padding for mobile tab bar */}
       <main className="lg:pl-64 min-h-[100dvh]">
         {/* Desktop top bar: search + ticker. Mobile already has its own header above */}
-        <div className="hidden lg:flex sticky top-0 z-20 items-center gap-3 px-6 h-14 bg-[rgba(10,12,16,0.85)] backdrop-blur border-b border-[var(--color-card-border)]">
+        <div className="hidden lg:flex sticky top-0 z-20 items-center gap-3 px-6 h-14 bg-[rgba(6,12,24,0.85)] backdrop-blur border-b border-[var(--color-card-border)]">
           <div className="flex-1">
             <CommandBar />
           </div>
@@ -277,11 +282,11 @@ function NavLink({
       className={cn(
         'flex items-center gap-3 h-11 px-3 rounded-lg text-sm transition-colors',
         active
-          ? 'bg-[var(--color-primary)] text-white'
-          : 'text-[var(--color-foreground)] hover:bg-[#1a1f29]',
+          ? 'bg-[rgba(216,173,88,0.08)] text-[var(--color-primary)] lg:rounded-l-none lg:border-l-2 lg:border-[var(--color-primary)]'
+          : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-hover)]',
       )}
     >
-      <Icon size={18} className={active ? 'text-white' : 'text-[var(--color-muted)]'} />
+      <Icon size={18} className={active ? 'text-[var(--color-primary)]' : 'text-[var(--color-dim)]'} />
       {item.label}
     </Link>
   );
@@ -289,8 +294,12 @@ function NavLink({
 
 function Logo() {
   return (
-    <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-[var(--color-accent)] to-[#b89060] flex items-center justify-center text-[10px] font-bold text-[#7a1717]">
-      ANU
-    </div>
+    <img
+      src="/icon-192.png"
+      alt="Anu Spirits mark"
+      width={36}
+      height={36}
+      className="h-9 w-9 rounded-lg"
+    />
   );
 }

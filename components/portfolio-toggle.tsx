@@ -26,7 +26,7 @@ export function PortfolioToggle() {
     return (
       <div className="flex items-center gap-2 text-xs">
         <span className="text-muted">Portfolio:</span>
-        <span className="px-3 py-1 rounded-md font-semibold bg-[var(--color-accent)] text-[#2a1f0f]">
+        <span className="px-3 py-1 rounded-md font-semibold bg-[var(--color-accent)] text-[var(--color-primary-fg)]">
           NB Distillers
         </span>
         <button
@@ -111,7 +111,7 @@ export function PortfolioToggle() {
           onClick={() => setPf(p)}
           className={`px-3 py-1 rounded-md font-semibold transition-colors ${
             pf === p
-              ? 'bg-[var(--color-accent)] text-[#2a1f0f]'
+              ? 'bg-[var(--color-accent)] text-[var(--color-primary-fg)]'
               : 'bg-[var(--color-card)] border border-[var(--color-card-border)]'
           }`}
         >

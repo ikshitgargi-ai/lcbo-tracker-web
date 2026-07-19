@@ -3,7 +3,7 @@
 //
 // On upgrade: bump VERSION to invalidate ALL old caches and force fresh HTML.
 
-const VERSION = 'anu-lcbo-v4';
+const VERSION = 'anu-lcbo-v5';
 
 self.addEventListener('install', (e) => {
   // Take over immediately — don't wait for old tabs to close

@@ -24,6 +24,13 @@ import {
   Legend,
 } from 'recharts';
 import { api } from '@/lib/api';
+import {
+  CHART_GRID,
+  CHART_TICK,
+  CHART_TOOLTIP_BG,
+  CHART_TOOLTIP_BORDER,
+  STATUS,
+} from '@/lib/chart-colors';
 import { FreshnessBanner } from '@/components/freshness-banner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatNumber, formatDate, statusBadgeClass, statusLabel } from '@/lib/utils';
@@ -100,7 +107,7 @@ export default function NbTrackerPage() {
           label="Tasting Follow-ups"
           value={t?.totals.tasting_followups_count ?? '—'}
           icon={<Coffee size={16} />}
-          color="#a78bfa"
+          color="#408eff"
         />
         <BigKpi
           label="Delisting Now"
@@ -183,32 +190,32 @@ export default function NbTrackerPage() {
                 <AreaChart data={t.trend_30d} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                   <defs>
                     <linearGradient id="nbListed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#12c28c" stopOpacity={0.7} />
-                      <stop offset="95%" stopColor="#12c28c" stopOpacity={0.05} />
+                      <stop offset="5%" stopColor={STATUS.listed} stopOpacity={0.7} />
+                      <stop offset="95%" stopColor={STATUS.listed} stopOpacity={0.05} />
                     </linearGradient>
                     <linearGradient id="nbDelisting" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#fdcb6e" stopOpacity={0.7} />
-                      <stop offset="95%" stopColor="#fdcb6e" stopOpacity={0.05} />
+                      <stop offset="5%" stopColor={STATUS.delisting} stopOpacity={0.7} />
+                      <stop offset="95%" stopColor={STATUS.delisting} stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2430" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
                   <XAxis
                     dataKey="date"
-                    tick={{ fill: '#7a818c', fontSize: 11 }}
+                    tick={{ fill: CHART_TICK, fontSize: 11 }}
                     tickFormatter={(d) => d.slice(5)}
                   />
-                  <YAxis tick={{ fill: '#7a818c', fontSize: 11 }} />
+                  <YAxis tick={{ fill: CHART_TICK, fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{
-                      background: '#12151b',
-                      border: '1px solid #1f2430',
+                      background: CHART_TOOLTIP_BG,
+                      border: `1px solid ${CHART_TOOLTIP_BORDER}`,
                       borderRadius: 8,
                       fontSize: 12,
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Area type="monotone" dataKey="listed" stroke="#12c28c" fill="url(#nbListed)" name="Listed" />
-                  <Area type="monotone" dataKey="delisting" stroke="#fdcb6e" fill="url(#nbDelisting)" name="Delisting" />
+                  <Area type="monotone" dataKey="listed" stroke={STATUS.listed} fill="url(#nbListed)" name="Listed" />
+                  <Area type="monotone" dataKey="delisting" stroke={STATUS.delisting} fill="url(#nbDelisting)" name="Delisting" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -408,7 +415,7 @@ export default function NbTrackerPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Coffee size={18} className="text-[#a78bfa]" />
+              <Coffee size={18} className="text-[var(--color-data)]" />
               {t.tasting_followups.length} tasting follow-ups
             </CardTitle>
             <CardDescription>

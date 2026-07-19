@@ -7,18 +7,19 @@ import { Target, Filter, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, type Deal, type DealStage } from '@/lib/api';
 import { useActiveRep } from '@/lib/active-rep';
+import { PIPELINE_STAGE_COLORS } from '@/lib/chart-colors';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
 
 const STAGES: { key: DealStage; label: string; color: string }[] = [
-  { key: 'prospecting', label: 'Prospecting', color: '#8b929e' },
-  { key: 'pitched', label: 'Pitched', color: '#74b9ff' },
-  { key: 'tasting_scheduled', label: 'Tasting Sched', color: '#a78bfa' },
-  { key: 'tasting_done', label: 'Tasted', color: '#f59e0b' },
-  { key: 'samples_left', label: 'Samples Left', color: '#fdcb6e' },
-  { key: 'in_review', label: 'In Review', color: '#d4a574' },
-  { key: 'listed', label: 'Listed (Won)', color: '#12c28c' },
-  { key: 'lost', label: 'Lost', color: '#ef4b4b' },
+  { key: 'prospecting', label: 'Prospecting', color: PIPELINE_STAGE_COLORS.prospecting },
+  { key: 'pitched', label: 'Pitched', color: PIPELINE_STAGE_COLORS.pitched },
+  { key: 'tasting_scheduled', label: 'Tasting Sched', color: PIPELINE_STAGE_COLORS.tasting_scheduled },
+  { key: 'tasting_done', label: 'Tasted', color: PIPELINE_STAGE_COLORS.tasting_done },
+  { key: 'samples_left', label: 'Samples Left', color: PIPELINE_STAGE_COLORS.samples_left },
+  { key: 'in_review', label: 'In Review', color: PIPELINE_STAGE_COLORS.in_review },
+  { key: 'listed', label: 'Listed (Won)', color: PIPELINE_STAGE_COLORS.listed },
+  { key: 'lost', label: 'Lost', color: PIPELINE_STAGE_COLORS.lost },
 ];
 
 export default function PipelinePage() {
@@ -70,7 +71,7 @@ export default function PipelinePage() {
           disabled={!activeRep}
           className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium min-h-11 ${
             scopeMine && activeRep
-              ? 'bg-[var(--color-accent)] text-[#2a1f0f]'
+              ? 'bg-[var(--color-accent)] text-[var(--color-primary-fg)]'
               : 'bg-[var(--color-card)] border border-[var(--color-card-border)]'
           } ${!activeRep ? 'opacity-50' : ''}`}
         >
@@ -81,7 +82,7 @@ export default function PipelinePage() {
           onClick={() => setIncludeClosed((v) => !v)}
           className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium min-h-11 ${
             includeClosed
-              ? 'bg-[var(--color-accent)] text-[#2a1f0f]'
+              ? 'bg-[var(--color-accent)] text-[var(--color-primary-fg)]'
               : 'bg-[var(--color-card)] border border-[var(--color-card-border)]'
           }`}
         >
@@ -166,7 +167,7 @@ function DealCard({ deal, onMove }: { deal: Deal; onMove: (stage: DealStage) => 
         </Link>
         <span
           className="change-chip text-[10px]"
-          style={{ background: (stage?.color ?? '#888') + '33', color: stage?.color }}
+          style={{ background: (stage?.color ?? '#9fa8bb') + '33', color: stage?.color }}
         >
           {deal.probability}%
         </span>

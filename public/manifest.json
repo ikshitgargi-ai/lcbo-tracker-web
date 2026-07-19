@@ -1,11 +1,11 @@
 {
-  "name": "Anu Spirits — LCBO Tracker",
+  "name": "Anu Spirits LCBO Tracker",
   "short_name": "Anu LCBO",
   "description": "Commercial-grade LCBO + HORECA CRM for Anu Spirits",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0c10",
-  "theme_color": "#0a0c10",
+  "background_color": "#060c18",
+  "theme_color": "#060c18",
   "orientation": "portrait",
   "icons": [
     {
